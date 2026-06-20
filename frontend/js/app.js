@@ -35,23 +35,31 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   navItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
       showView(item.dataset.view);
     });
   });
 
-  // Default view
-  showView('dashboard');
+
 
   /* ── Dashboard Quick Actions ────────────────────────────── */
   const dashStartTaskBtn = document.getElementById('dash-start-task');
   const dashViewAllBtn   = document.getElementById('dash-view-all-scripts');
 
   if (dashStartTaskBtn) {
-    dashStartTaskBtn.addEventListener('click', () => showView('home'));
+    dashStartTaskBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Navigating to home view...');
+      showView('home');
+    });
   }
   if (dashViewAllBtn) {
-    dashViewAllBtn.addEventListener('click', () => showView('scripts'));
+    dashViewAllBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showView('scripts');
+    });
   }
 
   /* ── Procedure multi-select ──────────────────────────────── */
@@ -186,5 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (newTaskBtn) {
     newTaskBtn.addEventListener('click', () => showView('home'));
   }
+
+  // Default view: execute at the very end after all variables are initialized to avoid TDZ ReferenceError.
+  showView('dashboard');
 
 });
