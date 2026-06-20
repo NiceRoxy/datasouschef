@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DataSousChef app — select your data preparation task and get started." />
+  <meta name="robots" content="noindex" />
+  <title>DataSousChef — My Workspace</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  SIDEBAR                                                 ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<aside id="app-sidebar" class="app-sidebar" role="navigation" aria-label="App navigation">
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <svg width="32" height="32" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 8 h18 a18 18 0 0 1 0 44 h-18 z" fill="#345463"/>
+      <path d="M34 16 C44 16, 50 22, 44 30 C38 38, 50 38, 50 44"
+            stroke="#AFBF73" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+    </svg>
+    DataSousChef
+  </div>
+
+  <!-- Nav links -->
+  <nav class="sidebar-nav" aria-label="Primary navigation">
+
+    <p class="sidebar-section-label">Overview</p>
+
+    <button class="nav-item active" data-view="dashboard" aria-current="page">
+      <span class="nav-icon" aria-hidden="true">📊</span>
+      Dashboard
+    </button>
+
+    <p class="sidebar-section-label">Tasks</p>
+
+    <button class="nav-item" data-view="home">
+      <span class="nav-icon" aria-hidden="true">✨</span>
+      New Task
+    </button>
+
+    <button class="nav-item" data-view="scripts">
+      <span class="nav-icon" aria-hidden="true">📄</span>
+      My Scripts
+      <span class="nav-badge" aria-label="2 scripts">2</span>
+    </button>
+
+    <p class="sidebar-section-label">Support</p>
+
+    <button class="nav-item" data-view="help">
+      <span class="nav-icon" aria-hidden="true">❓</span>
+      Help &amp; Guidance
+    </button>
+
+    <a class="nav-item" href="index.html" target="_blank" rel="noopener">
+      <span class="nav-icon" aria-hidden="true">🏠</span>
+      Back to home page
+    </a>
+
+  </nav>
+
+  <!-- Trial status -->
+  <div class="sidebar-trial" role="complementary" aria-label="Free trial status">
+    <p class="trial-label">Free trial</p>
+    <p class="trial-days">Day 1 <span style="font-size:1rem;font-weight:400;color:rgba(218,237,234,0.5)">of 3</span></p>
+    <p class="trial-sub">2 days remaining</p>
+    <div class="trial-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="3" aria-label="Trial progress: day 1 of 3">
+      <div class="trial-bar-fill"></div>
+    </div>
+    <a href="#" class="trial-upgrade">Upgrade to continue →</a>
+  </div>
+
+  <!-- User info footer -->
+  <div class="sidebar-user">
+    <div class="user-avatar" aria-hidden="true">H</div>
+    <div class="user-info">
+      <p class="user-name">Helen</p>
+      <p class="user-email">helen@university.ac.uk</p>
+    </div>
+    <button class="sidebar-logout" aria-label="Log out" title="Log out">⏻</button>
+  </div>
+
+</aside>
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  TOP BAR                                                 ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<header class="app-topbar" role="banner">
+
+  <!-- Mobile menu button -->
+  <button id="mobile-menu-btn"
+          style="display:none;background:none;border:none;cursor:pointer;font-size:1.4rem;color:var(--navy);margin-right:1rem;"
+          aria-label="Open navigation menu"
+          aria-expanded="false">
+    ☰
+  </button>
+
+  <!-- Breadcrumb -->
+  <div class="topbar-breadcrumb" aria-label="Breadcrumb">
+    <span style="color:var(--text-muted)">Workspace</span>
+    <span class="topbar-breadcrumb-sep" aria-hidden="true">›</span>
+    <span id="topbar-page">New Task</span>
+  </div>
+
+  <!-- Actions -->
+  <div class="topbar-actions">
+    <button class="topbar-help" id="topbar-help-btn" aria-label="Help and guidance">
+      <span aria-hidden="true">❓</span> Help
+    </button>
+  </div>
+
+</header>
+
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  MAIN CONTENT                                            ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<main class="app-main" id="main-content">
+  <div class="app-content">
+
+
+    <!-- ══════════════════════════════════════════════════════
+         VIEW: DASHBOARD — Overview
+         ══════════════════════════════════════════════════════ -->
+    <section id="view-dashboard" class="view" aria-labelledby="dashboard-heading">
+      
+      <div class="welcome-header">
+        <p class="welcome-greeting">Good morning, Helen 👋</p>
+        <h1 id="dashboard-heading">Overview</h1>
+        <p class="welcome-sub">Manage your account, view recent scripts, and start new data cleaning tasks.</p>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- Profile Widget -->
+        <div class="dash-card profile-card">
+          <div class="profile-header">
+            <div class="user-avatar large" aria-hidden="true">H</div>
+            <div>
+              <h2 class="profile-name">Helen</h2>
+              <p class="profile-email">helen@university.ac.uk</p>
+            </div>
+          </div>
+          <div class="profile-org">
+            <span class="org-label">Organisation</span>
+            <span class="org-value">University of Example</span>
+          </div>
+          <button class="btn btn-ghost btn-small">Edit Profile</button>
+        </div>
+
+        <!-- Subscription / Trial Widget -->
+        <div class="dash-card trial-card">
+          <div class="trial-header">
+            <h2>Free Trial</h2>
+            <span class="trial-badge">2 days left</span>
+          </div>
+          <p class="trial-desc">You are currently on Day 1 of your 3-day free trial. Upgrade now to unlock unlimited scripts.</p>
+          <div class="trial-bar" role="progressbar" aria-valuenow="1" aria-valuemin="0" aria-valuemax="3" aria-label="Trial progress: day 1 of 3">
+            <div class="trial-bar-fill"></div>
+          </div>
+          <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:1rem;">Upgrade to Pro</button>
+        </div>
+
+        <!-- Start Task Widget -->
+        <div class="dash-card action-card">
+          <h2>Ready to clean data?</h2>
+          <p>Select a procedure to find hidden problems, check logic across columns, or link datasets.</p>
+          <button class="btn btn-primary" id="dash-start-task" style="margin-top:1rem;">
+            Start a New Task <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <!-- Privacy Reminder -->
+        <div class="dash-card privacy-card">
+          <div class="privacy-icon" aria-hidden="true">🔒</div>
+          <div>
+            <h2>Data Privacy Guarantee</h2>
+            <p>0 rows uploaded. Your descriptions and column names never leave your machine.</p>
+          </div>
+        </div>
+
+        <!-- Recent Scripts Widget -->
+        <div class="dash-card scripts-card" style="grid-column: 1 / -1;">
+          <div class="scripts-header">
+            <h2>Recent Scripts</h2>
+            <button class="btn btn-ghost btn-small" id="dash-view-all-scripts">View All</button>
+          </div>
+          <div class="recent-scripts-list">
+            <div class="script-card">
+              <div class="script-card-icon" aria-hidden="true">🐍</div>
+              <div class="script-card-info">
+                <p class="script-card-name">clean_student_enrolment_2024.py</p>
+                <p class="script-card-meta">Diagnose &amp; Standardise · Generated 18 Jun 2026</p>
+              </div>
+              <button class="script-card-download" aria-label="Download clean_student_enrolment_2024.py">⬇ Download</button>
+            </div>
+            <div class="script-card">
+              <div class="script-card-icon" aria-hidden="true">🐍</div>
+              <div class="script-card-info">
+                <p class="script-card-name">link_module_outcomes.py</p>
+                <p class="script-card-meta">Link Datasets · Generated 15 Jun 2026</p>
+              </div>
+              <button class="script-card-download" aria-label="Download link_module_outcomes.py">⬇ Download</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         VIEW: HOME — Procedure selection
+         ══════════════════════════════════════════════════════ -->
+    <section id="view-home" class="view" aria-labelledby="home-heading">
+
+      <div class="welcome-header">
+        <p class="welcome-greeting">New Task</p>
+        <h1 id="home-heading">What can I do for you today?</h1>
+        <p class="welcome-sub">Select all the tasks that apply to your dataset. You can combine them.</p>
+
+        <!-- Read me toggle -->
+        <button
+          class="readme-toggle"
+          id="readme-toggle"
+          aria-expanded="false"
+          aria-controls="readme-panel"
+        >
+          Need help deciding?
+          <span class="readme-toggle-icon" aria-hidden="true">▼</span>
+          Read me
+        </button>
+
+        <!-- Expandable explainer panel -->
+        <div
+          class="readme-panel"
+          id="readme-panel"
+          role="region"
+          aria-label="Explainer: how to choose"
+          aria-hidden="true"
+        >
+          <p>
+            Preparing data usually takes the largest share of any analysis — often more than half the work — and most
+            of that time is spent checking and tidying. DataSousChef helps with that step in two ways: it
+            <strong>describes what your data is like</strong> and <strong>finds quality problems</strong> for you to fix.
+          </p>
+          <p>
+            You describe your data by answering short questions. Nothing about your data ever leaves your computer.
+            You then get a Python script to run yourself.
+          </p>
+          <p>
+            <strong>Option 1 — Diagnose &amp; Standardise:</strong>
+            A step-by-step guide to find hidden problems in your dataset. For example, extra spaces in column headings,
+            or values that mean the same thing but are written differently — like <em>F, f, Female</em> and <em>female</em>
+            in a Gender column.
+          </p>
+          <p>
+            <strong>Option 2 — Cross-Column Checks:</strong>
+            For more complex datasets with columns that relate to each other. For example, comparing an Age column
+            and a Date of Birth column to check they agree, or spotting unusual values.
+          </p>
+          <p>
+            <strong>Option 3 — Link Datasets:</strong>
+            Helps you decide how to join two or more files — which column to use as the link, and whether either
+            file has duplicates that would cause problems.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section label -->
+      <div class="section-divider" aria-hidden="true">Select all that apply</div>
+
+      <!-- Procedure cards -->
+      <div
+        class="procedure-select-grid"
+        role="group"
+        aria-label="Select data preparation tasks"
+      >
+
+        <!-- Card 1: Diagnose & Standardise -->
+        <div
+          class="proc-select-card"
+          data-proc="diagnose"
+          role="checkbox"
+          aria-checked="false"
+          tabindex="0"
+          aria-label="Diagnose problems in my dataset and standardise its format"
+          id="proc-diagnose"
+        >
+          <div class="proc-checkbox" aria-hidden="true">
+            <span class="proc-checkbox-tick">✓</span>
+          </div>
+          <div class="proc-card-icon sage" aria-hidden="true">🔍</div>
+          <div class="proc-card-body">
+            <h2 class="proc-card-title">Diagnose problems in my dataset and standardise its format</h2>
+            <p class="proc-card-desc">
+              Find hidden problems column by column and make formats consistent throughout.
+              You don't need to know the technical term — just recognise the symptom.
+            </p>
+            <div class="proc-card-examples" aria-label="Examples">
+              <span class="proc-example-chip">Extra spaces in headings</span>
+              <span class="proc-example-chip">Inconsistent capitalisation</span>
+              <span class="proc-example-chip">Dates stored as text</span>
+              <span class="proc-example-chip">Missing values coded as 999</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Cross-column checks -->
+        <div
+          class="proc-select-card"
+          data-proc="crosscol"
+          role="checkbox"
+          aria-checked="false"
+          tabindex="0"
+          aria-label="Check for logical conflicts across columns and spot outliers"
+          id="proc-crosscol"
+        >
+          <div class="proc-checkbox" aria-hidden="true">
+            <span class="proc-checkbox-tick">✓</span>
+          </div>
+          <div class="proc-card-icon rose" aria-hidden="true">⚖️</div>
+          <div class="proc-card-body">
+            <h2 class="proc-card-title">Check for logical conflicts across columns and spot outliers</h2>
+            <p class="proc-card-desc">
+              For datasets where columns relate to each other. Check that values are
+              logically consistent and flag anything that looks unusual.
+            </p>
+            <div class="proc-card-examples" aria-label="Examples">
+              <span class="proc-example-chip">Age must match date of birth</span>
+              <span class="proc-example-chip">End date can't precede start date</span>
+              <span class="proc-example-chip">Totals that should add up</span>
+              <span class="proc-example-chip">Unusual or outlier values</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Link datasets -->
+        <div
+          class="proc-select-card"
+          data-proc="link"
+          role="checkbox"
+          aria-checked="false"
+          tabindex="0"
+          aria-label="Link two or more datasets together"
+          id="proc-link"
+        >
+          <div class="proc-checkbox" aria-hidden="true">
+            <span class="proc-checkbox-tick">✓</span>
+          </div>
+          <div class="proc-card-icon mint" aria-hidden="true">🔗</div>
+          <div class="proc-card-body">
+            <h2 class="proc-card-title">Link two or more datasets together</h2>
+            <p class="proc-card-desc">
+              Join datasets using a shared identifier. The tool helps you decide which
+              column to use as the link and checks both files for duplicates first.
+            </p>
+            <div class="proc-card-examples" aria-label="Examples">
+              <span class="proc-example-chip">Match students across two files</span>
+              <span class="proc-example-chip">Find records missing from one file</span>
+              <span class="proc-example-chip">Check for duplicate IDs</span>
+              <span class="proc-example-chip">Normalise IDs before matching</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sticky continue bar -->
+      <div
+        class="continue-bar"
+        id="continue-bar"
+        role="status"
+        aria-live="polite"
+        aria-label="Selection status and continue action"
+      >
+        <div class="continue-status">
+          <span class="continue-status-dot" aria-hidden="true"></span>
+          <span class="continue-status-text" id="continue-status-text">
+            Select at least one option above
+          </span>
+        </div>
+        <div class="continue-selected-tags" id="selected-tags" aria-label="Selected procedures"></div>
+        <button
+          class="btn-continue"
+          id="btn-continue"
+          aria-label="Continue to questionnaire"
+          aria-disabled="true"
+        >
+          Continue
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+
+    </section>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         VIEW: QUESTIONNAIRE — Multi-step form
+         ══════════════════════════════════════════════════════ -->
+    <section id="view-questionnaire" class="view" aria-labelledby="questionnaire-heading">
+      
+      <div class="welcome-header">
+        <h1 id="questionnaire-heading">Dataset Description</h1>
+        <p class="welcome-sub">Answer a few questions about your data so we can generate your script.</p>
+      </div>
+
+      <!-- Progress / Steps -->
+      <div class="wizard-progress">
+        <div class="wizard-step active" data-step="1">1. General</div>
+        <div class="wizard-step" data-step="2" id="nav-step-diag" style="display:none;">2. Diagnose</div>
+        <div class="wizard-step" data-step="3" id="nav-step-cross" style="display:none;">3. Cross-Column</div>
+        <div class="wizard-step" data-step="4" id="nav-step-link" style="display:none;">4. Link Datasets</div>
+        <div class="wizard-step" data-step="5">5. Confirm</div>
+      </div>
+
+      <div class="wizard-body">
+        
+        <!-- STEP 1: General Info -->
+        <div class="wizard-page active" id="wizard-page-1">
+          <h2>General Information</h2>
+          <p class="wizard-page-desc">Tell us about the dataset you are working with.</p>
+          
+          <div class="form-group">
+            <label>What is this dataset, in a sentence?</label>
+            <input type="text" id="q-dataset-name" placeholder="e.g. Student enrolment records for 2024">
+          </div>
+          
+          <div class="form-row" style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+              <label>File format</label>
+              <select id="q-dataset-format">
+                <option value="csv">CSV (.csv)</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>Text encoding</label>
+              <select id="q-dataset-encoding">
+                <option value="utf-8">UTF-8 (standard)</option>
+                <option value="unknown">Unsure</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Roughly how many records should there be?</label>
+            <input type="number" id="q-dataset-rows" placeholder="e.g. 4200">
+          </div>
+
+        </div>
+
+        <!-- STEP 2: Diagnose & Standardise -->
+        <div class="wizard-page" id="wizard-page-2">
+          <h2>Diagnose &amp; Standardise</h2>
+          <p class="wizard-page-desc">Which columns do you need to check and clean? Describe them below.</p>
+          
+          <div id="column-list">
+            <!-- Dynamic columns will be injected here -->
+          </div>
+          
+          <button class="btn btn-ghost" id="btn-add-column" style="margin-top: 1rem;">
+            + Add another column
+          </button>
+        </div>
+
+        <!-- STEP 3: Cross-column checks -->
+        <div class="wizard-page" id="wizard-page-3">
+          <h2>Cross-Column Checks</h2>
+          <p class="wizard-page-desc">Check relationships between columns.</p>
+          
+          <div class="form-group">
+            <label>In your own words, what would you like to check? (Optional)</label>
+            <textarea id="q-crosscol-desc" rows="3" placeholder="e.g. The Course Commence Date must be earlier than the Withdrawal Date..."></textarea>
+          </div>
+
+          <div class="check-box-group" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+            <label class="check-label"><input type="checkbox" id="chk-date-order" value="date_order"> <strong>Date/time order</strong> (One date must fall on or before another)</label>
+            <label class="check-label"><input type="checkbox" id="chk-diff-plaus" value="diff_plausible"> <strong>Difference plausible</strong> (The gap between two values is sensible)</label>
+            <label class="check-label"><input type="checkbox" id="chk-age-dob" value="age_dob"> <strong>Age vs date of birth</strong> (Derived values must agree)</label>
+            <label class="check-label"><input type="checkbox" id="chk-totals" value="totals_reconcile"> <strong>Totals reconcile</strong> (Numbers add up across columns)</label>
+            <label class="check-label"><input type="checkbox" id="chk-cond-req" value="cond_required"> <strong>Conditional required</strong> (If X is present, Y must be too)</label>
+            <label class="check-label"><input type="checkbox" id="chk-mut-ex" value="mutually_exclusive"> <strong>Mutually exclusive</strong> (Two things can't both be true)</label>
+          </div>
+        </div>
+
+        <!-- STEP 4: Link Datasets -->
+        <div class="wizard-page" id="wizard-page-4">
+          <h2>Link Datasets</h2>
+          <p class="wizard-page-desc">Configure how multiple datasets should be joined.</p>
+          
+          <div class="form-group">
+            <label>Name the datasets being joined</label>
+            <input type="text" id="q-link-names" placeholder="e.g. Enrolments and Module Outcomes">
+          </div>
+          
+          <div class="form-group">
+            <label>Which column(s) match records across datasets?</label>
+            <input type="text" id="q-link-keys" placeholder="e.g. Student ID">
+          </div>
+
+          <div class="form-group">
+            <label>Identifier consistency</label>
+            <select id="q-link-consistency">
+              <option value="identical">Identical formats</option>
+              <option value="different_formatting">Different formatting</option>
+              <option value="different_word_order">Different word order</option>
+              <option value="unsure">Unsure</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Match type</label>
+            <select id="q-link-match-type">
+              <option value="exact">Exact match</option>
+              <option value="normalised">Normalised (tidy then match)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Join type</label>
+            <select id="q-link-join-type">
+              <option value="all_from_first">Keep all from first</option>
+              <option value="only_matches">Only matches</option>
+              <option value="all_from_both">All from both</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>On duplicates / no match</label>
+            <select id="q-link-on-unmatched">
+              <option value="report_keep">Report and keep</option>
+              <option value="report_drop">Report and drop unmatched</option>
+              <option value="stop_warn">Stop and warn</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- STEP 5: Confirmation -->
+        <div class="wizard-page" id="wizard-page-5">
+          <h2>Confirmation</h2>
+          <p class="wizard-page-desc">Review your choices before we generate the script.</p>
+          
+          <div class="confirmation-summary" id="confirmation-summary">
+            <!-- Filled by JS -->
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="wizard-footer" style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--grey-200); padding-top: 1.5rem;">
+        <button class="btn btn-ghost" id="wizard-btn-back" style="visibility:hidden;">← Back</button>
+        <button class="btn btn-primary" id="wizard-btn-next">Next →</button>
+        <button class="btn btn-primary" id="wizard-btn-submit" style="display:none;background:var(--sage);color:var(--navy-dark);">Generate Script</button>
+      </div>
+
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════
+         VIEW: MY SCRIPTS
+         ══════════════════════════════════════════════════════ -->
+    <section id="view-scripts" class="view" aria-labelledby="scripts-heading">
+
+      <div class="welcome-header">
+        <h1 id="scripts-heading">My Scripts</h1>
+        <p class="welcome-sub">Scripts generated in your past sessions. Download and run them locally at any time.</p>
+      </div>
+
+      <!-- Example scripts (placeholder data) -->
+      <div style="display:flex;flex-direction:column;gap:0.75rem;" role="list" aria-label="Generated scripts">
+
+        <div class="script-card" role="listitem" tabindex="0" aria-label="Student enrolment 2024, generated 18 June, download available">
+          <div class="script-card-icon" aria-hidden="true">🐍</div>
+          <div class="script-card-info">
+            <p class="script-card-name">clean_student_enrolment_2024.py</p>
+            <p class="script-card-meta">Diagnose &amp; Standardise · Generated 18 Jun 2026</p>
+          </div>
+          <span class="script-card-status status-success" aria-label="Status: completed">Completed</span>
+          <button class="script-card-download" aria-label="Download clean_student_enrolment_2024.py">⬇ Download</button>
+        </div>
+
+        <div class="script-card" role="listitem" tabindex="0" aria-label="Module outcomes link, generated 15 June, pending">
+          <div class="script-card-icon" aria-hidden="true">🐍</div>
+          <div class="script-card-info">
+            <p class="script-card-name">link_module_outcomes.py</p>
+            <p class="script-card-meta">Link Datasets · Generated 15 Jun 2026</p>
+          </div>
+          <span class="script-card-status status-pending" aria-label="Status: in progress">In progress</span>
+          <button class="script-card-download" aria-label="Download link_module_outcomes.py">⬇ Download</button>
+        </div>
+
+      </div>
+
+      <!-- Empty state (shown when no scripts — hidden by default here) -->
+      <div class="scripts-empty" id="scripts-empty" style="display:none;" aria-live="polite">
+        <div class="scripts-empty-icon" aria-hidden="true">📭</div>
+        <h3>No scripts yet</h3>
+        <p>Your generated Python scripts will appear here after your first task.</p>
+        <button class="btn btn-primary" id="new-task-shortcut">Start your first task →</button>
+      </div>
+
+    </section>
+
+
+    <!-- ══════════════════════════════════════════════════════
+         VIEW: HELP
+         ══════════════════════════════════════════════════════ -->
+    <section id="view-help" class="view" aria-labelledby="help-heading">
+
+      <div class="welcome-header">
+        <h1 id="help-heading">Help &amp; Guidance</h1>
+        <p class="welcome-sub">New to DataSousChef? Start here. No data knowledge assumed.</p>
+      </div>
+
+      <div class="help-grid" role="list">
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">🚀</div>
+          <h3>Getting started</h3>
+          <p>How to run your first task from start to finish — selecting a procedure, answering questions, and running your script.</p>
+        </div>
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">🐍</div>
+          <h3>Running your Python script</h3>
+          <p>Don't know Python? No problem. Step-by-step instructions to install Python and run the script DataSousChef generates for you.</p>
+        </div>
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">🔒</div>
+          <h3>Privacy &amp; data security</h3>
+          <p>How DataSousChef keeps your data on your computer and what information is — and isn't — sent to our system.</p>
+        </div>
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">⚠️</div>
+          <h3>Script ran but results look wrong?</h3>
+          <p>How to use the troubleshooting loop — share the printed diagnostic summary (not your data) to get a corrected script.</p>
+        </div>
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">💳</div>
+          <h3>Subscription &amp; billing</h3>
+          <p>What happens after your 3-day free trial, how subscription pricing works, and how to upgrade or cancel.</p>
+        </div>
+
+        <div class="help-card" role="listitem">
+          <div class="help-card-icon" aria-hidden="true">✉️</div>
+          <h3>Contact us</h3>
+          <p>Can't find your answer here? Send us a message and we'll get back to you within one working day.</p>
+        </div>
+
+      </div>
+
+    </section>
+
+
+  </div><!-- /.app-content -->
+</main><!-- /.app-main -->
+
+<script src="js/app.js"></script>
+<script src="js/questionnaire.js"></script>
+<script type="module" src="js/firebase-config.js"></script>
+<script type="module" src="js/auth.js"></script>
+<!-- Show mobile menu button via JS media query -->
+<script>
+  (function() {
+    var btn = document.getElementById('mobile-menu-btn');
+    function checkWidth() {
+      if (btn) btn.style.display = window.innerWidth <= 900 ? 'inline-flex' : 'none';
+    }
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+  })();
+</script>
+
+</body>
+</html>
