@@ -83,20 +83,102 @@ document.addEventListener('DOMContentLoaded', () => {
     updateWizardUI();
   });
 
-  btnSubmit?.addEventListener('click', () => {
-    // Simulate script generation
-    alert("Data contract has been sent to the backend. Generating script...");
-    
-    // Switch to scripts view and add a mock entry
-    const views = document.querySelectorAll('.view');
-    views.forEach(v => v.classList.remove('active'));
-    document.getElementById('view-scripts').classList.add('active');
-    
-    // Also update sidebar nav
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(n => n.classList.remove('active'));
-    const scriptsNav = document.querySelector('.nav-item[data-view="scripts"]');
-    if(scriptsNav) scriptsNav.classList.add('active');
+  btnSubmit?.addEventListener('click', async () => {
+    // 1. Build the data contract
+    const contract = {
+      dataset_name: document.getElementById('q-dataset-name').value || "Unnamed Dataset",
+      dataset_format: document.getElementById('q-dataset-format').value,
+      dataset_encoding: document.getElementById('q-dataset-encoding').value,
+      dataset_rows: document.getElementById('q-dataset-rows').value || "Unknown",
+      selected_procedures: selectedProcs,
+      columns_to_clean: [],
+      cross_col_description: null,
+      cross_col_rules: [],
+      link_config: null
+    };
+
+    if (selectedProcs.includes('diagnose')) {
+      const colCards = document.querySelectorAll('.column-card');
+      colCards.forEach(card => {
+        contract.columns_to_clean.push({
+          name: card.querySelector('.col-name').value || "Unnamed",
+          expected_type: card.querySelector('.col-type').value,
+          meaning: card.querySelector('.col-meaning').value || ""
+        });
+      });
+    }
+
+    if (selectedProcs.includes('crosscol')) {
+      contract.cross_col_description = document.getElementById('q-crosscol-desc').value;
+      const checked = document.querySelectorAll('.check-box-group input:checked');
+      checked.forEach(chk => contract.cross_col_rules.push(chk.value));
+    }
+
+    if (selectedProcs.includes('link')) {
+      contract.link_config = {
+        link_names: document.getElementById('q-link-names').value,
+        link_keys: document.getElementById('q-link-keys').value,
+        link_consistency: document.getElementById('q-link-consistency').value,
+        link_match_type: document.getElementById('q-link-match-type').value,
+        link_join_type: document.getElementById('q-link-join-type').value,
+        link_on_unmatched: document.getElementById('q-link-on-unmatched').value
+      };
+    }
+
+    // Update UI to show loading state
+    const originalText = btnSubmit.textContent;
+    btnSubmit.textContent = "Generating...";
+    btnSubmit.disabled = true;
+
+    try {
+      // 2. Send to backend
+      const response = await fetch('http://localhost:8000/api/generate-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(contract)
+      });
+
+      if (!response.ok) {
+        throw new Error("Server responded with " + response.status);
+      }
+
+      const scriptContent = await response.text();
+
+      // 3. Trigger download of the python file
+      const blob = new Blob([scriptContent], { type: 'text/x-python' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Create a nice filename
+      let safeName = contract.dataset_name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      if (!safeName) safeName = "dataset";
+      a.download = `clean_${safeName}.py`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Switch to scripts view
+      const views = document.querySelectorAll('.view');
+      views.forEach(v => v.classList.remove('active'));
+      document.getElementById('view-scripts').classList.add('active');
+      
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(n => n.classList.remove('active'));
+      const scriptsNav = document.querySelector('.nav-item[data-view="scripts"]');
+      if(scriptsNav) scriptsNav.classList.add('active');
+
+    } catch (err) {
+      alert("Failed to generate script: " + err.message + "\\n\\nMake sure the local FastAPI backend is running on port 8000!");
+      console.error(err);
+    } finally {
+      btnSubmit.textContent = originalText;
+      btnSubmit.disabled = false;
+    }
   });
 
   /* ── Dynamic Column Builder for Procedure 1 ── */
