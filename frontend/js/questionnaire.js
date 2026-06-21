@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       // 2. Send to backend
-      const response = await fetch('http://localhost:8000/api/generate-script', {
+      const response = await fetch('http://127.0.0.1:8000/api/generate-script', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
