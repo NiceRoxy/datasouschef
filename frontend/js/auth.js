@@ -52,25 +52,50 @@ const isAppPage = currentPath.endsWith('app.html');
 
     // Signup form
     const signupForm = document.getElementById('signup-form');
+    const signupError = document.createElement('div');
+    signupError.style.cssText = "color: #c94040; font-size: 0.85rem; margin-bottom: 1rem; display: none;";
     if (signupForm) {
+      const submitBtn = document.getElementById('signup-submit');
+      signupForm.insertBefore(signupError, submitBtn);
+
       signupForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
         const confirm = document.getElementById('signup-confirm').value;
 
-        if (password !== confirm) {
-          alert("Passwords do not match");
+        signupError.style.display = 'none';
+
+        if (!email || !password || !confirm) {
+          signupError.textContent = "Please fill in all required fields.";
+          signupError.style.display = 'block';
           return;
         }
 
+        if (password !== confirm) {
+          signupError.textContent = "Passwords do not match.";
+          signupError.style.display = 'block';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Creating account...';
+
         createUserWithEmailAndPassword(auth, email, password)
           .then((userCredential) => {
-            // Signed up successfully
-            window.location.href = 'app.html';
+            // Show success modal instead of redirecting immediately
+            document.getElementById('modal-form-view').style.display = 'none';
+            const modalSuccess = document.getElementById('modal-success');
+            if (modalSuccess) modalSuccess.classList.add('show');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
           })
           .catch((error) => {
-            alert(error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            signupError.textContent = error.message;
+            signupError.style.display = 'block';
           });
       });
     }
@@ -98,11 +123,17 @@ const isAppPage = currentPath.endsWith('app.html');
             console.error("Login failed:", error);
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
+            
+            let errorMsg = error.message;
+            if (error.code === 'auth/invalid-credential') {
+              errorMsg = "Incorrect email or password.";
+            }
+            
             if (loginError) {
-              loginError.textContent = error.message;
+              loginError.textContent = errorMsg;
               loginError.style.display = 'block';
             } else {
-              alert(error.message);
+              alert(errorMsg);
             }
           });
       });

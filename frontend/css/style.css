@@ -1218,6 +1218,15 @@ footer {
 .reveal-delay-3 { transition-delay: 0.3s; }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1440px) {
+  .hero-content {
+    max-width: 55%;
+  }
+  .hero-visual {
+    width: 40vw;
+  }
+}
+
 @media (max-width: 1024px) {
   .hero-visual { display: none; }
   .hero-content { max-width: 100%; }

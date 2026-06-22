@@ -33,6 +33,14 @@ Write a python script using pandas to clean the dataset based on the following c
 You can use the Tavily search tool to look up pandas documentation or Python syntax if you are unsure.
 The dataset is '{contract.dataset_name}' (format: {contract.dataset_format}, encoding: {contract.dataset_encoding}).
 
+## Global Standardisation Rules (Must Apply Always):
+1. Extension Permission logic: If an "Extension Permission" column exists, normalise "YES", "Yes", "yes" to "Yes", and "No", "no", "N" to "No". Do not flag "Assessment Complete Date" > "Assessment Deadline" as late if Extension is "Yes". MUST flag records where Complete Date > Deadline AND Extension is "No" or missing.
+2. Date format standardisation: Auto-detect all date columns and convert them to standard ISO format (YYYY-MM-DD).
+3. Register Status normalisation: If a "Register Status" column exists, use fuzzy matching/canonical mapping to standardise typos (e.g. "active", "ACTIVE" -> "Active", "Withdrwal" -> "Withdrawn", "suspended", "Suspend" -> "Suspended", "Defer" -> "Deferred").
+4. ID standardisation: Trim whitespace and uppercase all ID columns (e.g., Student ID) before performing any merges.
+5. Cross-dataset orphan detection: When linking datasets, surface unmatched records from both sides (left-only and right-only) into separate dataframes/CSV outputs rather than silently dropping them.
+6. Withdrawn student handling: When linking, cross-reference register status. Flag or separate result records for students with a "Withdrawn" or "Suspended" register status.
+
 """
     
     if "diagnose" in contract.selected_procedures and contract.columns_to_clean:
