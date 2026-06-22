@@ -85,7 +85,7 @@
       <p class="user-name">Helen</p>
       <p class="user-email">helen@university.ac.uk</p>
     </div>
-    <button class="sidebar-logout" aria-label="Log out" title="Log out">⏻</button>
+    <button class="sidebar-logout" aria-label="Log out" title="Log out" style="display:flex;align-items:center;gap:0.4rem;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px 8px;border-radius:4px;"><span style="font-size:1.1rem">⏻</span> Log out</button>
   </div>
 
 </aside>
@@ -416,11 +416,11 @@
 
       <!-- Progress / Steps -->
       <div class="wizard-progress">
-        <div class="wizard-step active" data-step="1">1. General</div>
-        <div class="wizard-step" data-step="2" id="nav-step-diag" style="display:none;">2. Diagnose</div>
-        <div class="wizard-step" data-step="3" id="nav-step-cross" style="display:none;">3. Cross-Column</div>
-        <div class="wizard-step" data-step="4" id="nav-step-link" style="display:none;">4. Link Datasets</div>
-        <div class="wizard-step" data-step="5">5. Confirm</div>
+        <div class="wizard-step active" data-step="1">General</div>
+        <div class="wizard-step" data-step="2" id="nav-step-diag" style="display:none;">Diagnose</div>
+        <div class="wizard-step" data-step="3" id="nav-step-cross" style="display:none;">Cross-Column</div>
+        <div class="wizard-step" data-step="4" id="nav-step-link" style="display:none;">Link Datasets</div>
+        <div class="wizard-step" data-step="5">Confirm</div>
       </div>
 
       <div class="wizard-body">
@@ -463,15 +463,37 @@
         <!-- STEP 2: Diagnose & Standardise -->
         <div class="wizard-page" id="wizard-page-2">
           <h2>Diagnose &amp; Standardise</h2>
-          <p class="wizard-page-desc">Which columns do you need to check and clean? Describe them below.</p>
+          <p class="wizard-page-desc">How would you like to describe the data details? (If you have >5 columns, uploading dummy data is recommended).</p>
           
-          <div id="column-list">
-            <!-- Dynamic columns will be injected here -->
+          <div class="form-group" style="margin-bottom: 2rem;">
+            <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="diagnose_path" value="upload" checked> Upload dummy dataset
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="diagnose_path" value="form"> Fill in a form
+              </label>
+            </div>
+          </div>
+
+          <!-- PATH A: Upload Dummy Dataset -->
+          <div id="path-a-upload" style="background: rgba(175,191,115,0.1); padding: 1.5rem; border-radius: var(--radius-md); border: 1px dashed var(--sage-dark);">
+            <p style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--navy-dark);">
+              <strong>Privacy Promise:</strong> Your dummy data must mimic the real dataset's characteristics exactly. It will be parsed locally on your machine to extract column headers and 3 sample rows. No raw files are ever uploaded.
+            </p>
+            <input type="file" id="dummy-file-upload" accept=".csv" style="display: block; width: 100%; padding: 0.5rem; background: var(--white); border: 1px solid var(--grey-200); border-radius: var(--radius-sm);" />
+            <p id="dummy-file-status" style="font-size: 0.85rem; color: var(--sage-dark); margin-top: 0.5rem; font-weight: 600;"></p>
           </div>
           
-          <button class="btn btn-ghost" id="btn-add-column" style="margin-top: 1rem;">
-            + Add another column
-          </button>
+          <!-- PATH B: Fill in a Form -->
+          <div id="path-b-form" style="display: none;">
+            <div id="column-list">
+              <!-- Dynamic columns will be injected here -->
+            </div>
+            <button class="btn btn-ghost" id="btn-add-column" style="margin-top: 1rem;">
+              + Add another column
+            </button>
+          </div>
         </div>
 
         <!-- STEP 3: Cross-column checks -->
@@ -480,17 +502,9 @@
           <p class="wizard-page-desc">Check relationships between columns.</p>
           
           <div class="form-group">
-            <label>In your own words, what would you like to check? (Optional)</label>
-            <textarea id="q-crosscol-desc" rows="3" placeholder="e.g. The Course Commence Date must be earlier than the Withdrawal Date..."></textarea>
-          </div>
-
-          <div class="check-box-group" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
-            <label class="check-label"><input type="checkbox" id="chk-date-order" value="date_order"> <strong>Date/time order</strong> (One date must fall on or before another)</label>
-            <label class="check-label"><input type="checkbox" id="chk-diff-plaus" value="diff_plausible"> <strong>Difference plausible</strong> (The gap between two values is sensible)</label>
-            <label class="check-label"><input type="checkbox" id="chk-age-dob" value="age_dob"> <strong>Age vs date of birth</strong> (Derived values must agree)</label>
-            <label class="check-label"><input type="checkbox" id="chk-totals" value="totals_reconcile"> <strong>Totals reconcile</strong> (Numbers add up across columns)</label>
-            <label class="check-label"><input type="checkbox" id="chk-cond-req" value="cond_required"> <strong>Conditional required</strong> (If X is present, Y must be too)</label>
-            <label class="check-label"><input type="checkbox" id="chk-mut-ex" value="mutually_exclusive"> <strong>Mutually exclusive</strong> (Two things can't both be true)</label>
+            <label>Which columns do you want to check and why?</label>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Describe the rules. E.g., "The Course Commence Date must be earlier than the Withdrawal Date", or "If column A is Yes, column B cannot be blank."</p>
+            <textarea id="q-crosscol-desc" rows="4" placeholder="Describe your logical cross-column rules here..."></textarea>
           </div>
         </div>
 
@@ -500,8 +514,18 @@
           <p class="wizard-page-desc">Configure how multiple datasets should be joined.</p>
           
           <div class="form-group">
+            <label>What problem will the linked dataset be answering?</label>
+            <textarea id="q-link-problem" rows="2" placeholder="e.g. We want to analyse students' assessment load by combining Enrolments and Outcomes"></textarea>
+          </div>
+
+          <div class="form-group">
             <label>Name the datasets being joined</label>
             <input type="text" id="q-link-names" placeholder="e.g. Enrolments and Module Outcomes">
+          </div>
+
+          <div class="form-group">
+            <label>Which dataset is the PRIMARY dataset? (Keep all records from this one)</label>
+            <input type="text" id="q-link-primary" placeholder="e.g. Enrolments">
           </div>
           
           <div class="form-group">
@@ -670,6 +694,7 @@
 </main><!-- /.app-main -->
 
 <script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="js/questionnaire.js"></script>
 <script type="module" src="js/firebase-config.js"></script>
 <script type="module" src="js/auth.js"></script>

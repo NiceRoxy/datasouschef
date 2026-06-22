@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from .models import DataContract
-from .generator import generate_mock_script
+from .agent import generate_cleaning_script
 
 app = FastAPI(title="DataSousChef API", version="0.1.0")
 
@@ -29,8 +29,8 @@ def generate_script(contract: DataContract):
     """
     # 1. We have already validated the incoming JSON against the Pydantic models automatically!
     
-    # 2. Generate the python script content
-    script_content = generate_mock_script(contract)
+    # 2. Generate the python script content using the LLM agent
+    script_content = generate_cleaning_script(contract)
     
     # 3. Return the string as plain text
     return script_content

@@ -18,7 +18,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Listen for the start of the wizard
   document.addEventListener('start-questionnaire', (e) => {
-    selectedProcs = e.detail.procs;
+    let procs = e.detail.procs;
+    
+    // Apply user logic rules:
+    // Link Datasets -> requires Cross-Column and Diagnose
+    if (procs.includes('link') && !procs.includes('crosscol')) procs.push('crosscol');
+    // Cross-Column -> requires Diagnose
+    if (procs.includes('crosscol') && !procs.includes('diagnose')) procs.push('diagnose');
+
+    selectedProcs = procs;
     currentStep = 1;
     
     // Setup progress bar visibility
@@ -98,24 +106,46 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (selectedProcs.includes('diagnose')) {
-      const colCards = document.querySelectorAll('.column-card');
-      colCards.forEach(card => {
-        contract.columns_to_clean.push({
-          name: card.querySelector('.col-name').value || "Unnamed",
-          expected_type: card.querySelector('.col-type').value,
-          meaning: card.querySelector('.col-meaning').value || ""
+      const diagnosePath = document.querySelector('input[name="diagnose_path"]:checked').value;
+      if (diagnosePath === 'upload' && parsedDummyData) {
+        // Path A
+        contract.columns_to_clean = parsedDummyData.headers.map(h => ({
+          name: h,
+          expected_type: 'unsure',
+          meaning: 'Extracted from uploaded dummy data'
+        }));
+        // We could also pass parsedDummyData.sample_rows to the backend if needed, 
+        // but for now, we just pass the headers.
+      } else {
+        // Path B
+        const colCards = document.querySelectorAll('.column-card');
+        colCards.forEach(card => {
+          const typeSelect = card.querySelector('.col-type');
+          const missingSelect = card.querySelector('.col-missing');
+          const missingCode = card.querySelector('.col-missing-code');
+          const contextVal = card.querySelector('.col-context-val');
+
+          contract.columns_to_clean.push({
+            name: card.querySelector('.col-name').value || "Unnamed",
+            expected_type: typeSelect ? typeSelect.value : 'text',
+            missing_values: missingSelect ? missingSelect.value : 'no',
+            missing_code: missingCode ? missingCode.value : '',
+            context: contextVal ? contextVal.value : '',
+            meaning: card.querySelector('.col-meaning').value || ""
+          });
         });
-      });
+      }
     }
 
     if (selectedProcs.includes('crosscol')) {
       contract.cross_col_description = document.getElementById('q-crosscol-desc').value;
-      const checked = document.querySelectorAll('.check-box-group input:checked');
-      checked.forEach(chk => contract.cross_col_rules.push(chk.value));
+      contract.cross_col_rules = []; // We removed the checkboxes, it's just free text now
     }
 
     if (selectedProcs.includes('link')) {
       contract.link_config = {
+        link_problem: document.getElementById('q-link-problem').value,
+        link_primary: document.getElementById('q-link-primary').value,
         link_names: document.getElementById('q-link-names').value,
         link_keys: document.getElementById('q-link-keys').value,
         link_consistency: document.getElementById('q-link-consistency').value,
@@ -181,7 +211,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ── Dynamic Column Builder for Procedure 1 ── */
+  /* ── Diagnose Path Toggle ── */
+  const pathRadios = document.querySelectorAll('input[name="diagnose_path"]');
+  const pathA = document.getElementById('path-a-upload');
+  const pathB = document.getElementById('path-b-form');
+  
+  pathRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      if (e.target.value === 'upload') {
+        pathA.style.display = 'block';
+        pathB.style.display = 'none';
+      } else {
+        pathA.style.display = 'none';
+        pathB.style.display = 'block';
+      }
+    });
+  });
+
+  /* ── Path A: CSV Parsing ── */
+  let parsedDummyData = null; // Store { headers: [], sample_rows: [] }
+  const fileInput = document.getElementById('dummy-file-upload');
+  const fileStatus = document.getElementById('dummy-file-status');
+  
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      Papa.parse(file, {
+        header: true,
+        preview: 3, // only read first 3 rows for privacy/speed
+        complete: function(results) {
+          if (results.meta && results.meta.fields) {
+            parsedDummyData = {
+              headers: results.meta.fields,
+              sample_rows: results.data
+            };
+            fileStatus.textContent = `Successfully extracted ${results.meta.fields.length} headers and 3 sample rows.`;
+          } else {
+            fileStatus.textContent = `Error reading CSV. Please ensure it has headers.`;
+            fileStatus.style.color = '#c94040';
+          }
+        },
+        error: function(err) {
+          fileStatus.textContent = `Error: ${err.message}`;
+          fileStatus.style.color = '#c94040';
+        }
+      });
+    });
+  }
+
+  /* ── Dynamic Column Builder for Path B ── */
   const btnAddColumn = document.getElementById('btn-add-column');
   const columnList = document.getElementById('column-list');
   let columnCount = 0;
@@ -202,20 +282,58 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" class="col-name" placeholder="Exactly as in file">
         </div>
         <div class="form-group" style="flex:1;">
-          <label>Expected type</label>
+          <label>Data type</label>
           <select class="col-type">
             <option value="text">Free text</option>
             <option value="number">Number</option>
             <option value="date">Date</option>
             <option value="category">Category</option>
+            <option value="identifier">Identifier (ID)</option>
+            <option value="unsure">Unsure</option>
           </select>
         </div>
       </div>
       <div class="form-group">
-        <label>Meaning</label>
-        <input type="text" class="col-meaning" placeholder="What does this represent?">
+        <label>Are there missing values?</label>
+        <select class="col-missing">
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+        <input type="text" class="col-missing-code" placeholder="If yes, how are they coded? (e.g. NA, blank)" style="display:none; margin-top:0.5rem;">
+      </div>
+      <div class="form-group col-context-group">
+        <!-- Contextual options injected here -->
+      </div>
+      <div class="form-group">
+        <label>What should the clean data look like?</label>
+        <input type="text" class="col-meaning" placeholder="e.g. Group numbers into categories, format dates to DD/MM/YYYY">
       </div>
     `;
+
+    // Event listeners for dynamic fields
+    const missingSelect = div.querySelector('.col-missing');
+    const missingCode = div.querySelector('.col-missing-code');
+    missingSelect.addEventListener('change', (e) => {
+      missingCode.style.display = e.target.value === 'yes' ? 'block' : 'none';
+    });
+
+    const typeSelect = div.querySelector('.col-type');
+    const contextGroup = div.querySelector('.col-context-group');
+    typeSelect.addEventListener('change', (e) => {
+      const type = e.target.value;
+      let html = '';
+      if (type === 'number') {
+        html = `<label>Number constraints</label><input type="text" class="col-context-val" placeholder="e.g. Must be whole number, range 0-100">`;
+      } else if (type === 'date') {
+        html = `<label>Current date format</label><input type="text" class="col-context-val" placeholder="e.g. DD-MM-YYYY or text like '1st Jan'">`;
+      } else if (type === 'category') {
+        html = `<label>Allowed categories</label><input type="text" class="col-context-val" placeholder="e.g. Male, Female, Non-binary">`;
+      } else if (type === 'unsure') {
+        html = `<label>Dummy samples</label><input type="text" class="col-context-val" placeholder="Provide a few examples of the data">`;
+      }
+      contextGroup.innerHTML = html;
+    });
+
     return div;
   }
 
@@ -251,22 +369,25 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     if (selectedProcs.includes('diagnose')) {
-      const colCards = document.querySelectorAll('.column-card');
-      html += `<h4>Columns to clean (${colCards.length})</h4><ul style="margin-bottom:1rem; padding-left:1.5rem; color:var(--text-muted);">`;
-      colCards.forEach(card => {
-        const name = card.querySelector('.col-name').value || "Unnamed column";
-        html += `<li>${name}</li>`;
-      });
-      html += `</ul>`;
+      const diagnosePath = document.querySelector('input[name="diagnose_path"]:checked').value;
+      if (diagnosePath === 'upload' && parsedDummyData) {
+        html += `<h4>Columns to clean (${parsedDummyData.headers.length})</h4><ul style="margin-bottom:1rem; padding-left:1.5rem; color:var(--text-muted);">`;
+        parsedDummyData.headers.forEach(h => html += `<li>${h} (from dummy data)</li>`);
+        html += `</ul>`;
+      } else {
+        const colCards = document.querySelectorAll('.column-card');
+        html += `<h4>Columns to clean (${colCards.length})</h4><ul style="margin-bottom:1rem; padding-left:1.5rem; color:var(--text-muted);">`;
+        colCards.forEach(card => {
+          const name = card.querySelector('.col-name').value || "Unnamed column";
+          html += `<li>${name}</li>`;
+        });
+        html += `</ul>`;
+      }
     }
 
     if (selectedProcs.includes('crosscol')) {
-      const checked = document.querySelectorAll('.check-box-group input:checked');
-      html += `<h4>Cross-column rules (${checked.length})</h4><ul style="margin-bottom:1rem; padding-left:1.5rem; color:var(--text-muted);">`;
-      checked.forEach(chk => {
-        html += `<li>${chk.parentElement.textContent.trim()}</li>`;
-      });
-      html += `</ul>`;
+      const desc = document.getElementById('q-crosscol-desc').value;
+      html += `<h4>Cross-column rules</h4><p style="font-size:0.9rem; color:var(--text-muted);">${desc || 'None specified'}</p>`;
     }
 
     if (selectedProcs.includes('link')) {

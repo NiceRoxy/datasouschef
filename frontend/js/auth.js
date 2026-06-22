@@ -2,6 +2,7 @@ import { auth } from './firebase-config.js';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
+  sendPasswordResetEmail,
   onAuthStateChanged, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
@@ -106,6 +107,27 @@ const isAppPage = currentPath.endsWith('app.html');
           });
       });
     }
+
+    // Forgot password
+    const forgotBtn = document.getElementById('forgot-password-link');
+    if (forgotBtn) {
+      forgotBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        if (!email) {
+          alert('Please enter your email address in the field above first.');
+          return;
+        }
+        sendPasswordResetEmail(auth, email)
+          .then(() => {
+            alert('Password reset email sent! Check your inbox.');
+          })
+          .catch((error) => {
+            alert(error.message);
+          });
+      });
+    }
+
   } else {
     // We are on app.html, handle logout logic
     const logoutBtns = document.querySelectorAll('.sidebar-logout');

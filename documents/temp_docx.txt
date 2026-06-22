@@ -1,0 +1,57 @@
+Once logged in, cannot go back to homepage. Is there a log out button on app.html?
+Landing page display on 16:9 big screen and mobile phone is great, but not on my 15” laptop screen (Windows 11). This is a terrible error because most employees nowadays use laptop.
+
+
+Log in page add forgetting password and reset function.
+Dataset Description: remove number from the buttons, 1. General, 2. Diagnose etc.
+ The logic between choices on the New Task page and Questionnaire should be:
+Diagnose problems in my dataset and standardise its format → “General” “Diagnose” “Confirm”
+“Check for logical conflicts across columns and spot outliers” or “Diagnose problems in my dataset and standardise its format + Check for logical conflicts across columns and spot outliers” → “General” “Diagnose” “Cross-Column” “Confirm”
+“Link two or more datasets together” or “Diagnose problems in my dataset and standardise its format + Link two or more datasets together” or “Check for logical conflicts across columns and spot outliers + Link two or more datasets together” or all three options →” General” “Diagnose”” Cross-Column”” Link Datasets” “Confirm”
+
+Diagnose
+Diagnose process is tedious for datasets with many columns. Please optimise it.
+How would you like to describe the data details, fill in a form or upload an Excel sheet with exact headers and dummy data? Please note that the reliability of python code generated relies on your precise description or presentation of the dataset(s). If you have a large dataset with over five columns that you wanted to diagnose or check, uploading a dummy dataset with headers replicate the real dataset will be more efficient. 
+Fill in a form
+Upload dummy dataset (followed by add more if user selected “Link two or more datasets together”; if user have one or more dummy dataset(s) uploaded in a previous task and intend to link them, allow them to select it from the saved history list
+Fill in a form:
+First:
+Column header: text box
+Data type: drop down
+Free text
+Number 
+Date
+Category
+Identifier
+Unsure 
+Is there any missing value in this column?
+Yes 
+No
+If yes, ask about being coded specifically or not
+Second:
+Show different options based on the selection:
+Number 
+Ask min and max to understand the range
+Ask whole number or not
+Date
+Ask format
+Category
+Ask the category list
+Unsure 
+Ask to provide dummy samples
+Third:
+Ask what clean data should look like
+Whether change data type, for example, group a range of numbers to different categories, or code free text based on certain rules
+
+Upload dummy dataset
+Remind users that dummy data must show the true characteristics of their real dataset, for example, if ethnicity column includes 22 categories in real dataset, dummy data must include all 22 categories
+
+Cross-Column Checks
+The options for selection do not make sense. 
+Ask which columns users want to check and why
+Allow a dropdown list based on users’ input during the previous Diagnose process
+
+Link Datasets
+Some linking tasks need to pivot the dataset to generate a new unique identifier first before linkage. For the assessment outcome dataset, each assessment has a unique assessment ID, the dataset include course ID, module ID, CRN which is a unique ID for a module delivered for a specific group of students (The students in different courses who study the same module will be assigned different CRN, and part-time and full-time students in the same course also have different CRN), Year of Study. If we want to analyse students’ assessment load, we must pivot the dataset to enable calculation of assessments for students in different courses and Year of Study. An extra question to ask about what problem the linked dataset will be answering can help AI agent work correctly.
+Another important question is which dataset is the primary dataset that users want to keep all records, and which dataset will be linked to the primary one. This will ensure the merge process is correct.
+Duplication check and alert is default for all datasets. Always ask users’ confirmation for the next step, drop duplication or not. If many to many is detected and user do not wish drop duplication. End of the process and inform the user why.

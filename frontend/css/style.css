@@ -243,7 +243,7 @@ ul { list-style: none; }
 
 /* ── Hero ───────────────────────────────────────────────────── */
 #hero {
-  min-height: 100vh;
+  min-height: max(100vh, 750px);
   background: var(--mint);
   padding-top: var(--nav-h);
   display: flex;
