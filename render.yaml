@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: datasouschef-api
+    runtime: python
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements-deploy.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false        # Set manually in Render dashboard — never commit this
+      - key: TAVILY_API_KEY
+        sync: false        # Set manually in Render dashboard — never commit this
+      - key: PYTHON_VERSION
+        value: 3.11.0
