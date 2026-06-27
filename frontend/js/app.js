@@ -189,11 +189,76 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { trialFill.style.width = '33.33%'; }, 400);
   }
 
-  /* ── New Task shortcut (from My Scripts empty state) ──── */
-  const newTaskBtn = document.getElementById('new-task-shortcut');
-  if (newTaskBtn) {
-    newTaskBtn.addEventListener('click', () => showView('home'));
+  /* ── Topbar help button → help view ─────────────────────── */
+  const topbarHelpBtn = document.getElementById('topbar-help-btn');
+  if (topbarHelpBtn) {
+    topbarHelpBtn.addEventListener('click', () => showView('help'));
   }
+
+  /* ── Edit Profile Modal ──────────────────────────────────── */
+  const editProfileModal = document.getElementById('edit-profile-modal');
+  const editProfileClose = document.getElementById('edit-profile-close');
+  const editProfileSave  = document.getElementById('edit-profile-save');
+  const editProfileError = document.getElementById('edit-profile-error');
+
+  function openEditProfile() {
+    if (!editProfileModal) return;
+    editProfileModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    // Pre-fill with Firebase user data if available
+    if (window._firebaseUser) {
+      const nameInput = document.getElementById('edit-profile-name');
+      const emailInput = document.getElementById('edit-profile-email');
+      if (nameInput) nameInput.value = window._firebaseUser.displayName || '';
+      if (emailInput) emailInput.value = window._firebaseUser.email || '';
+    }
+  }
+
+  function closeEditProfile() {
+    if (!editProfileModal) return;
+    editProfileModal.style.display = 'none';
+    document.body.style.overflow = '';
+    if (editProfileError) { editProfileError.style.display = 'none'; editProfileError.textContent = ''; }
+  }
+
+  // Wire all "Edit Profile" buttons
+  document.querySelectorAll('.btn-ghost.btn-small').forEach(btn => {
+    if (btn.textContent.trim() === 'Edit Profile') {
+      btn.addEventListener('click', openEditProfile);
+    }
+  });
+
+  editProfileClose?.addEventListener('click', closeEditProfile);
+  editProfileModal?.addEventListener('click', (e) => { if (e.target === editProfileModal) closeEditProfile(); });
+
+  editProfileSave?.addEventListener('click', async () => {
+    const nameInput = document.getElementById('edit-profile-name');
+    const newName = nameInput ? nameInput.value.trim() : '';
+    if (!newName) {
+      if (editProfileError) { editProfileError.textContent = 'Display name cannot be blank.'; editProfileError.style.display = 'block'; }
+      return;
+    }
+
+    editProfileSave.disabled = true;
+    editProfileSave.textContent = 'Saving...';
+
+    try {
+      if (window._firebaseUser) {
+        // updateProfile is imported via auth.js and exposed on window
+        await window._updateFirebaseProfile(window._firebaseUser, { displayName: newName });
+        // Update all displayed names in the UI
+        document.querySelectorAll('.user-name, .profile-name').forEach(el => el.textContent = newName);
+        const avatar = document.querySelector('.user-avatar');
+        if (avatar) avatar.textContent = newName.charAt(0).toUpperCase();
+      }
+      closeEditProfile();
+    } catch (err) {
+      if (editProfileError) { editProfileError.textContent = err.message; editProfileError.style.display = 'block'; }
+    } finally {
+      editProfileSave.disabled = false;
+      editProfileSave.textContent = 'Save Changes';
+    }
+  });
 
   // Default view: execute at the very end after all variables are initialized to avoid TDZ ReferenceError.
   showView('dashboard');

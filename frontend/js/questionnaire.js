@@ -162,7 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       // 2. Send to backend
-      const response = await fetch('http://127.0.0.1:8000/api/generate-script', {
+      // BACKEND_URL: Update this to your deployed backend URL when hosted.
+      // For local development: 'http://127.0.0.1:8000'
+      const BACKEND_URL = 'http://127.0.0.1:8000';
+      const response = await fetch(`${BACKEND_URL}/api/generate-script`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -228,36 +231,85 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* ── Path A: CSV Parsing ── */
-  let parsedDummyData = null; // Store { headers: [], sample_rows: [] }
+  /* ── Path A: File Upload (CSV + Excel) ── */
+  let parsedDummyData = null;
   const fileInput = document.getElementById('dummy-file-upload');
   const fileStatus = document.getElementById('dummy-file-status');
-  
+
+  function renderColumnPreview(headers) {
+    const preview = document.getElementById('column-preview');
+    if (!preview) return;
+    preview.innerHTML = `
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;">Columns detected (${headers.length}):</p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+        ${headers.map(h => `<span style="background:var(--mint);color:var(--navy-dark);font-size:0.78rem;padding:0.2rem 0.6rem;border-radius:999px;">${h}</span>`).join('')}
+      </div>`;
+    preview.style.display = 'block';
+  }
+
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      
-      Papa.parse(file, {
-        header: true,
-        preview: 3, // only read first 3 rows for privacy/speed
-        complete: function(results) {
-          if (results.meta && results.meta.fields) {
-            parsedDummyData = {
-              headers: results.meta.fields,
-              sample_rows: results.data
-            };
-            fileStatus.textContent = `Successfully extracted ${results.meta.fields.length} headers and 3 sample rows.`;
-          } else {
-            fileStatus.textContent = `Error reading CSV. Please ensure it has headers.`;
+
+      fileStatus.style.color = 'var(--sage-dark)';
+      fileStatus.textContent = 'Parsing file...';
+
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'xlsx' || ext === 'xls') {
+        // Use SheetJS for Excel files
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const workbook = XLSX.read(ev.target.result, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            // Convert to JSON (just headers + first 3 rows)
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            if (!rows || rows.length === 0) {
+              fileStatus.textContent = 'Error: Could not read the Excel file. Make sure the first row contains column headers.';
+              fileStatus.style.color = '#c94040';
+              return;
+            }
+            const headers = rows[0].map(h => String(h).trim()).filter(h => h);
+            const sampleRows = rows.slice(1, 4).map(row =>
+              Object.fromEntries(headers.map((h, i) => [h, row[i] ?? '']))
+            );
+            parsedDummyData = { headers, sample_rows: sampleRows };
+            fileStatus.textContent = `✓ Extracted ${headers.length} columns from "${sheetName}" (Excel).`;
+            renderColumnPreview(headers);
+          } catch (err) {
+            fileStatus.textContent = `Error reading Excel file: ${err.message}`;
             fileStatus.style.color = '#c94040';
           }
-        },
-        error: function(err) {
-          fileStatus.textContent = `Error: ${err.message}`;
-          fileStatus.style.color = '#c94040';
-        }
-      });
+        };
+        reader.readAsArrayBuffer(file);
+
+      } else {
+        // Use PapaParse for CSV files
+        Papa.parse(file, {
+          header: true,
+          preview: 3,
+          complete: function(results) {
+            if (results.meta && results.meta.fields) {
+              parsedDummyData = {
+                headers: results.meta.fields,
+                sample_rows: results.data
+              };
+              fileStatus.textContent = `✓ Extracted ${results.meta.fields.length} columns from CSV.`;
+              renderColumnPreview(results.meta.fields);
+            } else {
+              fileStatus.textContent = 'Error reading CSV. Please ensure the first row contains column headers.';
+              fileStatus.style.color = '#c94040';
+            }
+          },
+          error: function(err) {
+            fileStatus.textContent = `Error: ${err.message}`;
+            fileStatus.style.color = '#c94040';
+          }
+        });
+      }
     });
   }
 
@@ -341,10 +393,14 @@ document.addEventListener('DOMContentLoaded', () => {
     columnList.appendChild(createColumnCard());
   });
 
-  // Handle remove column
+  // Handle remove column — with confirmation
   columnList?.addEventListener('click', (e) => {
     if (e.target.classList.contains('remove-column')) {
-      e.target.closest('.column-card').remove();
+      const card = e.target.closest('.column-card');
+      const colName = card.querySelector('.col-name').value || 'this column';
+      if (confirm(`Remove "${colName}"? This cannot be undone.`)) {
+        card.remove();
+      }
     }
   });
 

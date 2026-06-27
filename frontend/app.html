@@ -331,9 +331,11 @@
           <div class="proc-card-icon rose" aria-hidden="true">⚖️</div>
           <div class="proc-card-body">
             <h2 class="proc-card-title">Check for logical conflicts across columns and spot outliers</h2>
-            <p class="proc-card-desc">
-              For datasets where columns relate to each other. Check that values are
-              logically consistent and flag anything that looks unusual.
+            <p>
+              <strong>Option 2 — Cross-Column Checks &amp; Data Reshaping:</strong>
+              For more complex datasets with columns that relate to each other. Check that values are
+              logically consistent and flag anything that looks unusual. Also covers data reshaping — for
+              example, pivoting a "Booking Status" column by student ID to count each category.
             </p>
             <div class="proc-card-examples" aria-label="Examples">
               <span class="proc-example-chip">Age must match date of birth</span>
@@ -481,8 +483,9 @@
             <p style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--navy-dark);">
               <strong>Privacy Promise:</strong> Your dummy data must mimic the real dataset's characteristics exactly. It will be parsed locally on your machine to extract column headers and 3 sample rows. No raw files are ever uploaded.
             </p>
-            <input type="file" id="dummy-file-upload" accept=".csv" style="display: block; width: 100%; padding: 0.5rem; background: var(--white); border: 1px solid var(--grey-200); border-radius: var(--radius-sm);" />
+            <input type="file" id="dummy-file-upload" accept=".csv,.xlsx,.xls" style="display: block; width: 100%; padding: 0.5rem; background: var(--white); border: 1px solid var(--grey-200); border-radius: var(--radius-sm);" />
             <p id="dummy-file-status" style="font-size: 0.85rem; color: var(--sage-dark); margin-top: 0.5rem; font-weight: 600;"></p>
+            <div id="column-preview" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--white); border-radius:var(--radius-sm); border:1px solid var(--mint-dark);"></div>
           </div>
           
           <!-- PATH B: Fill in a Form -->
@@ -502,9 +505,14 @@
           <p class="wizard-page-desc">Check relationships between columns.</p>
           
           <div class="form-group">
-            <label>Which columns do you want to check and why?</label>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Describe the rules. E.g., "The Course Commence Date must be earlier than the Withdrawal Date", or "If column A is Yes, column B cannot be blank."</p>
-            <textarea id="q-crosscol-desc" rows="4" placeholder="Describe your logical cross-column rules here..."></textarea>
+            <label>What do you want to do — and across which columns?</label>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Describe any logical rules, transformations, or reshaping. For example:<br>
+              — "Course Commence Date must be earlier than Withdrawal Date"<br>
+              — "If Extension Permission is Yes, a late submission date is acceptable"<br>
+              — "Group rows by Roll Number, pivot Booking Status into columns, count each category"
+            </p>
+            <textarea id="q-crosscol-desc" rows="5" placeholder="Describe your rules, checks, or data reshaping here..."></textarea>
           </div>
         </div>
 
@@ -693,6 +701,27 @@
   </div><!-- /.app-content -->
 </main><!-- /.app-main -->
 
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  EDIT PROFILE MODAL                                      ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+<div id="edit-profile-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center;" role="dialog" aria-modal="true" aria-labelledby="edit-profile-title">
+  <div style="background:var(--white); border-radius:var(--radius-lg); padding:2rem; width:min(480px,90vw); box-shadow:var(--shadow-lg); position:relative;">
+    <button id="edit-profile-close" aria-label="Close" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-muted);">×</button>
+    <h2 id="edit-profile-title" style="margin-bottom:1.5rem;font-size:1.2rem;">Edit Profile</h2>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <label>Display Name</label>
+      <input type="text" id="edit-profile-name" placeholder="Your name" style="width:100%;">
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label>Email</label>
+      <input type="email" id="edit-profile-email" disabled style="width:100%;background:var(--bg-body);opacity:0.7;" title="Email cannot be changed here">
+    </div>
+    <div id="edit-profile-error" style="color:#c94040;font-size:0.85rem;margin-bottom:1rem;display:none;"></div>
+    <button id="edit-profile-save" class="btn btn-primary" style="width:100%;justify-content:center;">Save Changes</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="js/questionnaire.js"></script>

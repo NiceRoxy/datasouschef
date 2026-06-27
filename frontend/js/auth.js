@@ -3,9 +3,13 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   sendPasswordResetEmail,
+  updateProfile,
   onAuthStateChanged, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+
+// Expose updateProfile for use by app.js (non-module script)
+window._updateFirebaseProfile = updateProfile;
 
 const currentPath = window.location.pathname;
 const isAppPage = currentPath.endsWith('app.html');
@@ -14,12 +18,16 @@ const isAppPage = currentPath.endsWith('app.html');
   onAuthStateChanged(auth, (user) => {
     if (user) {
       // User is signed in.
+      window._firebaseUser = user; // expose for app.js profile editing
       if (!isAppPage) {
         window.location.href = 'app.html';
       } else {
         // Update user profile in app.html
-        const emailElements = document.querySelectorAll('.profile-email, .user-email');
-        emailElements.forEach(el => el.textContent = user.email);
+        const displayName = user.displayName || user.email.split('@')[0];
+        document.querySelectorAll('.profile-email, .user-email').forEach(el => el.textContent = user.email);
+        document.querySelectorAll('.user-name, .profile-name').forEach(el => el.textContent = displayName);
+        document.querySelectorAll('.user-avatar').forEach(el => el.textContent = displayName.charAt(0).toUpperCase());
+        document.querySelectorAll('.welcome-greeting').forEach(el => el.textContent = `Good morning, ${displayName} 👋`);
       }
     } else {
       // No user is signed in.
