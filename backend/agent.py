@@ -1,14 +1,17 @@
 import os
 import ast
 from models import DataContract
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Works locally; no-op in Cloud Functions where env vars are injected
+except ImportError:
+    pass
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
-from langchain.agents import create_agent
+from langgraph.prebuilt import create_react_agent
 from langchain_tavily import TavilySearch
-
-load_dotenv()
 
 # Configure API Keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -79,12 +82,12 @@ The code should define a function `clean_data(file_path)` and return a cleaned p
 
     # Initialize the LLM and Agent
     llm = ChatGoogleGenerativeAI(
-        model="gemini-3.1-pro-preview", 
-        google_api_key=GEMINI_API_KEY, 
+        model="gemini-2.5-pro",
+        google_api_key=GEMINI_API_KEY,
         temperature=0
     )
     tools = [TavilySearch(max_results=3)]
-    agent_executor = create_agent(llm, tools)
+    agent_executor = create_react_agent(llm, tools)
     
     max_retries = 3
     messages = [HumanMessage(content=prompt)]
