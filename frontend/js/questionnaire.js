@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 2. Send to backend
       // BACKEND_URL: points to the live Render deployment.
       // For local development, change this to 'http://127.0.0.1:8000'
-      const BACKEND_URL = 'https://datasouschef-api.onrender.com';
+      const BACKEND_URL = 'https://generate-script-dnrmsfmerq-nw.a.run.app';
       const response = await fetch(`${BACKEND_URL}/api/generate-script`, {
         method: 'POST',
         headers: {
