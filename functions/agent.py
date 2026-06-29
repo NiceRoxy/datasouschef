@@ -74,9 +74,10 @@ The code should define a function `clean_data(file_path)` and return a cleaned p
         return f"# ERROR: GEMINI_API_KEY not configured.\n# Prompt that would have been sent:\n\"\"\"\n{prompt}\n\"\"\""
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
+        model="gemini-2.5-flash",
         google_api_key=GEMINI_API_KEY,
-        temperature=0
+        temperature=0,
+        max_retries=3
     )
     tools = [TavilySearch(max_results=3)]
     agent_executor = create_react_agent(llm, tools)
