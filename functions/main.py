@@ -30,6 +30,7 @@ CORS_OPTIONS = options.CorsOptions(
     timeout_sec=540,   # 9 minutes — needed for LLM calls
     memory=options.MemoryOption.MB_512,
     region="europe-west2",  # London — closest to UK users
+    secrets=["GEMINI_API_KEY", "TAVILY_API_KEY"],
 )
 def generate_script(req: https_fn.Request) -> https_fn.Response:
     """

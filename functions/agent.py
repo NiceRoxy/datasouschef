@@ -13,14 +13,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 from langchain_tavily import TavilySearch
 
-# Configure API Keys
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY not found in environment variables.")
 
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-if not TAVILY_API_KEY:
-    print("WARNING: TAVILY_API_KEY not found in environment variables. Web search will fail.")
 
 def is_valid_python(code: str) -> bool:
     try:
@@ -76,6 +69,7 @@ Include inline comments in the code to explain your logic.
 The code should define a function `clean_data(file_path)` and return a cleaned pandas DataFrame.
 """
 
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     if not GEMINI_API_KEY:
         return f"# ERROR: GEMINI_API_KEY not configured.\n# Prompt that would have been sent:\n\"\"\"\n{prompt}\n\"\"\""
 
