@@ -16,6 +16,8 @@ from langchain_tavily import TavilySearch
 
 
 def is_valid_python(code: str) -> bool:
+    if not code.strip():
+        return False
     try:
         ast.parse(code)
         return True
@@ -90,6 +92,10 @@ The code should define a function `clean_data(file_path)` and return a cleaned p
             response = agent_executor.invoke({"messages": messages})
             final_message = response["messages"][-1]
             code = final_message.content
+
+            print(f"--- ATTEMPT {attempt + 1} RAW OUTPUT ---")
+            print(code)
+            print("--------------------------------------")
 
             if isinstance(code, list):
                 code = "".join([block.get("text", "") for block in code if block.get("type") == "text"])
