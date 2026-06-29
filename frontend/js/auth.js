@@ -12,7 +12,7 @@ import {
 window._updateFirebaseProfile = updateProfile;
 
 const currentPath = window.location.pathname;
-const isAppPage = currentPath.endsWith('app.html');
+const isAppPage = currentPath.includes('app.html') || currentPath.endsWith('/app');
 
 // Auth state listener
   onAuthStateChanged(auth, (user) => {
@@ -20,7 +20,7 @@ const isAppPage = currentPath.endsWith('app.html');
       // User is signed in.
       window._firebaseUser = user; // expose for app.js profile editing
       if (!isAppPage) {
-        window.location.href = 'app.html';
+        window.location.href = '/app';
       } else {
         // Update user profile in app.html
         const displayName = user.displayName || user.email.split('@')[0];
@@ -32,7 +32,7 @@ const isAppPage = currentPath.endsWith('app.html');
     } else {
       // No user is signed in.
       if (isAppPage) {
-        window.location.href = 'index.html';
+        window.location.href = '/';
       }
     }
   });
@@ -125,7 +125,7 @@ const isAppPage = currentPath.endsWith('app.html');
         signInWithEmailAndPassword(auth, email, password)
           .then((userCredential) => {
             // Signed in successfully
-            window.location.href = 'app.html';
+            window.location.href = '/app';
           })
           .catch((error) => {
             console.error("Login failed:", error);
