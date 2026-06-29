@@ -69,7 +69,7 @@ Include inline comments in the code to explain your logic.
 The code should define a function `clean_data(file_path)` and return a cleaned pandas DataFrame.
 """
 
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip("\"'")
     if not GEMINI_API_KEY:
         return f"# ERROR: GEMINI_API_KEY not configured.\n# Prompt that would have been sent:\n\"\"\"\n{prompt}\n\"\"\""
 
