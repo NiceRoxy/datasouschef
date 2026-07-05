@@ -11,5 +11,8 @@
         "*.pyc"
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }

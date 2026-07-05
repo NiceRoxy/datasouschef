@@ -1,0 +1,23 @@
+﻿User1 Testing report
+Scope of testing
+User1 signed up with a real work email on a work computer with a real data cleaning and processing scenario. Two types of tests were undertaken: 1. Select all three options and brief the dataset information via filling a form; 2. Select the first option, Diagnose problems in my dataset and standardise its format, and brief the dataset information via uploading a dummy dataset.
+Test 1:
+Test 2:
+Screen shoot 1:
+screen shoot 2
+screen shoot 3
+User action | Results | Description
+User1 signed up with work email | Proceeded | 
+User1 edited profile | Failed | ΓÇ£edit profileΓÇ¥ did not react
+User1 started a new task | Proceeded | 
+Selected all three options | Proceeded | 
+Filled general information | Proceeded | 
+Filled in a form | Proceeded but | Gaps discovered for optimisation: Human errors cannot be corrected, for example, deleted a column by mistake but couldnΓÇÖt recover, spelling mistakes couldnΓÇÖt be edited by user
+Filled in Cross-Column Checks | Proceeded but | Gaps discovered for optimisation: Column to row transformation is not considered (screen shoot 1)
+Filled in Link Datasets | Proceeded | 
+Confirmed tasks | Proceeded with error messages | screen shoot 2
+User action | Results | Description
+User1 logged in with work email | Proceeded | 
+User1 started a new task | Proceeded | 
+Selected first option | Proceeded | 
+Uploaded a dummy excel file | Failed | Failed discover the file type: user must select all files to see the targeted Excel file in the list Garbled text returned as the column information (screen shoot 3)

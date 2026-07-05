@@ -9,6 +9,60 @@
   <link rel="stylesheet" href="css/app.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    /* ── New procedure card states ─────────────────────────────── */
+    .proc-select-card--disabled {
+      opacity: 0.52;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .proc-select-card--active {
+      cursor: pointer;
+    }
+    .proc-select-card--active:hover {
+      border-color: var(--sage-dark);
+      box-shadow: 0 4px 16px rgba(175,191,115,0.25);
+    }
+    .proc-card-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.18rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+    .proc-card-badge--beta {
+      background: var(--sage);
+      color: var(--navy-dark);
+    }
+    .proc-card-badge--soon {
+      background: var(--grey-200);
+      color: var(--text-muted);
+    }
+    /* ── Column card table headers ─────────────────────────────── */
+    table th {
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 0.25rem 0.5rem 0.25rem 0;
+      border-bottom: 1px solid var(--grey-200);
+    }
+    table td { padding: 0.3rem 0.5rem 0.3rem 0; }
+    table td input, table td select { width: 100%; }
+    .btn-ghost.btn-small {
+      background: none;
+      border: 1px solid var(--grey-200);
+      border-radius: var(--radius-sm);
+      padding: 0.25rem 0.6rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--navy);
+    }
+    .btn-ghost.btn-small:hover { background: var(--grey-200); }
+  </style>
 </head>
 <body>
 
@@ -277,128 +331,97 @@
       </div>
 
       <!-- Section label -->
-      <div class="section-divider" aria-hidden="true">Select all that apply</div>
+      <div class="section-divider" aria-hidden="true">Choose a task</div>
 
       <!-- Procedure cards -->
       <div
         class="procedure-select-grid"
         role="group"
-        aria-label="Select data preparation tasks"
+        aria-label="Select data preparation task"
       >
 
-        <!-- Card 1: Diagnose & Standardise -->
+        <!-- Card 1: Audit and clean (BETA — active) -->
         <div
-          class="proc-select-card"
-          data-proc="diagnose"
-          role="checkbox"
-          aria-checked="false"
+          class="proc-select-card proc-select-card--active"
+          data-proc="audit"
+          role="button"
           tabindex="0"
-          aria-label="Diagnose problems in my dataset and standardise its format"
-          id="proc-diagnose"
+          aria-label="Audit and clean your dataset"
+          id="proc-audit"
         >
-          <div class="proc-checkbox" aria-hidden="true">
-            <span class="proc-checkbox-tick">✓</span>
-          </div>
+          <div class="proc-card-badge proc-card-badge--beta">Beta</div>
           <div class="proc-card-icon sage" aria-hidden="true">🔍</div>
           <div class="proc-card-body">
-            <h2 class="proc-card-title">Diagnose problems in my dataset and standardise its format</h2>
+            <h2 class="proc-card-title">Audit and clean</h2>
             <p class="proc-card-desc">
-              Find hidden problems column by column and make formats consistent throughout.
-              You don't need to know the technical term — just recognise the symptom.
+              Describe your columns, set your rules, and get a Python script that cleans
+              your data exactly the way you need — without uploading a single real record.
             </p>
             <div class="proc-card-examples" aria-label="Examples">
-              <span class="proc-example-chip">Extra spaces in headings</span>
-              <span class="proc-example-chip">Inconsistent capitalisation</span>
-              <span class="proc-example-chip">Dates stored as text</span>
-              <span class="proc-example-chip">Missing values coded as 999</span>
+              <span class="proc-example-chip">Standardise date formats</span>
+              <span class="proc-example-chip">Map category variants</span>
+              <span class="proc-example-chip">Handle missing values</span>
+              <span class="proc-example-chip">Deduplicate IDs</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 2: Cross-column checks -->
+        <!-- Card 2: Check data logics (Coming soon) -->
         <div
-          class="proc-select-card"
-          data-proc="crosscol"
-          role="checkbox"
-          aria-checked="false"
-          tabindex="0"
-          aria-label="Check for logical conflicts across columns and spot outliers"
+          class="proc-select-card proc-select-card--disabled"
+          role="presentation"
+          aria-disabled="true"
           id="proc-crosscol"
         >
-          <div class="proc-checkbox" aria-hidden="true">
-            <span class="proc-checkbox-tick">✓</span>
-          </div>
+          <div class="proc-card-badge proc-card-badge--soon">Coming soon</div>
           <div class="proc-card-icon rose" aria-hidden="true">⚖️</div>
           <div class="proc-card-body">
-            <h2 class="proc-card-title">Check for logical conflicts across columns and spot outliers</h2>
-            <p>
-              <strong>Option 2 — Cross-Column Checks &amp; Data Reshaping:</strong>
-              For more complex datasets with columns that relate to each other. Check that values are
-              logically consistent and flag anything that looks unusual. Also covers data reshaping — for
-              example, pivoting a "Booking Status" column by student ID to count each category.
+            <h2 class="proc-card-title">Check data logics</h2>
+            <p class="proc-card-desc">
+              Validate rules across columns — age must match date of birth, end date
+              can't precede start date, totals must add up.
             </p>
             <div class="proc-card-examples" aria-label="Examples">
-              <span class="proc-example-chip">Age must match date of birth</span>
-              <span class="proc-example-chip">End date can't precede start date</span>
-              <span class="proc-example-chip">Totals that should add up</span>
-              <span class="proc-example-chip">Unusual or outlier values</span>
+              <span class="proc-example-chip">Cross-column validation</span>
+              <span class="proc-example-chip">Conditional flags</span>
+              <span class="proc-example-chip">Outlier detection</span>
             </div>
           </div>
         </div>
 
-        <!-- Card 3: Link datasets -->
+        <!-- Card 3: Transform and link (Coming soon) -->
         <div
-          class="proc-select-card"
-          data-proc="link"
-          role="checkbox"
-          aria-checked="false"
-          tabindex="0"
-          aria-label="Link two or more datasets together"
+          class="proc-select-card proc-select-card--disabled"
+          role="presentation"
+          aria-disabled="true"
           id="proc-link"
         >
-          <div class="proc-checkbox" aria-hidden="true">
-            <span class="proc-checkbox-tick">✓</span>
-          </div>
+          <div class="proc-card-badge proc-card-badge--soon">Coming soon</div>
           <div class="proc-card-icon mint" aria-hidden="true">🔗</div>
           <div class="proc-card-body">
-            <h2 class="proc-card-title">Link two or more datasets together</h2>
+            <h2 class="proc-card-title">Transform and link</h2>
             <p class="proc-card-desc">
-              Join datasets using a shared identifier. The tool helps you decide which
-              column to use as the link and checks both files for duplicates first.
+              Reshape, pivot, and join two or more datasets using a shared identifier.
+              Handles duplicates and unmatched records automatically.
             </p>
             <div class="proc-card-examples" aria-label="Examples">
-              <span class="proc-example-chip">Match students across two files</span>
-              <span class="proc-example-chip">Find records missing from one file</span>
-              <span class="proc-example-chip">Check for duplicate IDs</span>
-              <span class="proc-example-chip">Normalise IDs before matching</span>
+              <span class="proc-example-chip">Match records across files</span>
+              <span class="proc-example-chip">Find unmatched IDs</span>
+              <span class="proc-example-chip">Pivot and reshape</span>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- Sticky continue bar -->
-      <div
-        class="continue-bar"
-        id="continue-bar"
-        role="status"
-        aria-live="polite"
-        aria-label="Selection status and continue action"
-      >
+      <!-- Continue bar — always active since only one card is selectable -->
+      <div class="continue-bar" id="continue-bar" role="status" aria-live="polite">
         <div class="continue-status">
           <span class="continue-status-dot" aria-hidden="true"></span>
-          <span class="continue-status-text" id="continue-status-text">
-            Select at least one option above
-          </span>
+          <span class="continue-status-text" id="continue-status-text">Click Audit and clean to start your interview</span>
         </div>
-        <div class="continue-selected-tags" id="selected-tags" aria-label="Selected procedures"></div>
-        <button
-          class="btn-continue"
-          id="btn-continue"
-          aria-label="Continue to questionnaire"
-          aria-disabled="true"
-        >
-          Continue
+        <button class="btn-continue" id="btn-continue" aria-label="Start the interview">
+          Start interview
           <span aria-hidden="true">→</span>
         </button>
       </div>
@@ -407,194 +430,216 @@
 
 
     <!-- ══════════════════════════════════════════════════════
-         VIEW: QUESTIONNAIRE — Multi-step form
+         VIEW: INTERVIEW — Guided interview (Sections A–H)
          ══════════════════════════════════════════════════════ -->
     <section id="view-questionnaire" class="view" aria-labelledby="questionnaire-heading">
       
       <div class="welcome-header">
-        <h1 id="questionnaire-heading">Dataset Description</h1>
-        <p class="welcome-sub">Answer a few questions about your data so we can generate your script.</p>
+        <h1 id="questionnaire-heading">Audit and clean — interview</h1>
+        <p class="welcome-sub" id="interview-subtitle">We'll ask you about your file section by section. Each answer shapes your cleaning script.</p>
       </div>
 
-      <!-- Progress / Steps -->
-      <div class="wizard-progress">
-        <div class="wizard-step active" data-step="1">General</div>
-        <div class="wizard-step" data-step="2" id="nav-step-diag" style="display:none;">Diagnose</div>
-        <div class="wizard-step" data-step="3" id="nav-step-cross" style="display:none;">Cross-Column</div>
-        <div class="wizard-step" data-step="4" id="nav-step-link" style="display:none;">Link Datasets</div>
-        <div class="wizard-step" data-step="5">Confirm</div>
+      <!-- Progress bar -->
+      <div class="wizard-progress" id="interview-progress" role="navigation" aria-label="Interview sections">
+        <div class="wizard-step active" data-section="A">A — File</div>
+        <div class="wizard-step" data-section="B">B — Columns</div>
+        <div class="wizard-step" data-section="C">C — Types</div>
+        <div class="wizard-step" data-section="D">D — Missing</div>
+        <div class="wizard-step" data-section="E">E — Rename</div>
+        <div class="wizard-step" data-section="F">F — Clean</div>
+        <div class="wizard-step" data-section="G">G — Recode</div>
+        <div class="wizard-step" data-section="H">H — Output</div>
+        <div class="wizard-step" data-section="review">Review</div>
       </div>
 
-      <div class="wizard-body">
-        
-        <!-- STEP 1: General Info -->
-        <div class="wizard-page active" id="wizard-page-1">
-          <h2>General Information</h2>
-          <p class="wizard-page-desc">Tell us about the dataset you are working with.</p>
-          
+      <div class="wizard-body" id="interview-body">
+
+        <!-- ── Section A: About your file ───────────────────────────── -->
+        <div class="wizard-page active" id="interview-section-A">
+          <h2>A — About your file</h2>
+          <p class="wizard-page-desc">Tell us about the data file you want to clean.</p>
+
           <div class="form-group">
-            <label>What is this dataset, in a sentence?</label>
-            <input type="text" id="q-dataset-name" placeholder="e.g. Student enrolment records for 2024">
+            <label for="qa-filename">What is the exact file name, including the ending?</label>
+            <input type="text" id="qa-filename" placeholder="e.g. student_register.csv">
           </div>
-          
-          <div class="form-row" style="display: flex; gap: 1rem;">
-            <div class="form-group" style="flex: 1;">
-              <label>File format</label>
-              <select id="q-dataset-format">
+
+          <div class="form-row" style="display:flex;gap:1rem;">
+            <div class="form-group" style="flex:1;">
+              <label for="qa-format">File format</label>
+              <select id="qa-format">
                 <option value="csv">CSV (.csv)</option>
                 <option value="xlsx">Excel (.xlsx)</option>
+                <option value="xls">Excel (.xls)</option>
+                <option value="tsv">Tab-separated (.tsv)</option>
                 <option value="other">Other</option>
               </select>
             </div>
-            <div class="form-group" style="flex: 1;">
-              <label>Text encoding</label>
-              <select id="q-dataset-encoding">
-                <option value="utf-8">UTF-8 (standard)</option>
-                <option value="unknown">Unsure</option>
-              </select>
+            <div class="form-group" style="flex:1;" id="qa-sheet-group" style="display:none;">
+              <label for="qa-sheet">Which sheet holds the data?</label>
+              <input type="text" id="qa-sheet" placeholder="Default: first sheet">
             </div>
           </div>
 
           <div class="form-group">
-            <label>Roughly how many records should there be?</label>
-            <input type="number" id="q-dataset-rows" placeholder="e.g. 4200">
+            <label for="qa-header">Does the first row contain column headings?</label>
+            <select id="qa-header">
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+              <option value="unsure">Not sure</option>
+            </select>
           </div>
 
+          <div class="form-group">
+            <label for="qa-rows">Roughly how many records?</label>
+            <select id="qa-rows">
+              <option value="under_1k">Under 1,000</option>
+              <option value="1k_10k">1,000 – 10,000</option>
+              <option value="10k_100k">10,000 – 100,000</option>
+              <option value="over_100k">Over 100,000</option>
+              <option value="unknown">Not sure</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="qa-encoding">Text encoding, if you know it</label>
+            <select id="qa-encoding">
+              <option value="utf-8">UTF-8 (standard)</option>
+              <option value="windows-1252">Windows-1252 (common for UK Excel exports)</option>
+              <option value="unknown">Not sure — try both</option>
+            </select>
+          </div>
         </div>
 
-        <!-- STEP 2: Diagnose & Standardise -->
-        <div class="wizard-page" id="wizard-page-2">
-          <h2>Diagnose &amp; Standardise</h2>
-          <p class="wizard-page-desc">How would you like to describe the data details? (If you have >5 columns, uploading dummy data is recommended).</p>
-          
-          <div class="form-group" style="margin-bottom: 2rem;">
-            <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
-                <input type="radio" name="diagnose_path" value="upload" checked> Upload dummy dataset
-              </label>
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
-                <input type="radio" name="diagnose_path" value="form"> Fill in a form
-              </label>
+        <!-- ── Section B: Columns ────────────────────────────────────── -->
+        <div class="wizard-page" id="interview-section-B">
+          <h2>B — Telling us about your columns</h2>
+          <p class="wizard-page-desc">Upload a dummy file to auto-detect columns, or type your headings manually.</p>
+
+          <!-- Upload route -->
+          <div class="form-group" style="background:rgba(175,191,115,0.1);padding:1.5rem;border-radius:var(--radius-md);border:1px dashed var(--sage-dark);margin-bottom:1.5rem;">
+            <p style="font-size:0.9rem;margin-bottom:0.75rem;"><strong>Recommended:</strong> Upload a dummy or sample file (a few rows of made-up data with real column headings). Parsed locally — no real data is ever sent.</p>
+            <input type="file" id="qb-file-upload" accept=".csv,.xlsx,.xls,.tsv">
+            <p id="qb-file-status" style="font-size:0.85rem;color:var(--sage-dark);margin-top:0.5rem;font-weight:600;"></p>
+            <div id="qb-column-preview" style="display:none;margin-top:0.75rem;"></div>
+          </div>
+
+          <!-- Manual fallback -->
+          <div class="form-group">
+            <label for="qb-manual-cols">Or type your column headings — one per line:</label>
+            <textarea id="qb-manual-cols" rows="5" placeholder="Student ID&#10;Assessment Deadline&#10;Result Status&#10;..."></textarea>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">One heading per line. Spaces will be trimmed automatically.</p>
+          </div>
+
+          <!-- Column selection -->
+          <div id="qb-selection-area" style="display:none;">
+            <div class="form-group">
+              <label>Which columns do you want to apply rules to?</label>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Unselected columns will be carried through unchanged.</p>
+              <div id="qb-column-checkboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
+              <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
+                <button type="button" class="btn-ghost btn-small" id="qb-select-all">Select all</button>
+                <button type="button" class="btn-ghost btn-small" id="qb-deselect-all">Deselect all</button>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- PATH A: Upload Dummy Dataset -->
-          <div id="path-a-upload" style="background: rgba(175,191,115,0.1); padding: 1.5rem; border-radius: var(--radius-md); border: 1px dashed var(--sage-dark);">
-            <p style="font-size: 0.95rem; margin-bottom: 1rem; color: var(--navy-dark);">
-              <strong>Privacy Promise:</strong> Your dummy data must mimic the real dataset's characteristics exactly. It will be parsed locally on your machine to extract column headers and 3 sample rows. No raw files are ever uploaded.
-            </p>
-            <input type="file" id="dummy-file-upload" accept=".csv,.xlsx,.xls" style="display: block; width: 100%; padding: 0.5rem; background: var(--white); border: 1px solid var(--grey-200); border-radius: var(--radius-sm);" />
-            <p id="dummy-file-status" style="font-size: 0.85rem; color: var(--sage-dark); margin-top: 0.5rem; font-weight: 600;"></p>
-            <div id="column-preview" style="display:none; margin-top:0.75rem; padding:0.75rem; background:var(--white); border-radius:var(--radius-sm); border:1px solid var(--mint-dark);"></div>
-          </div>
-          
-          <!-- PATH B: Fill in a Form -->
-          <div id="path-b-form" style="display: none;">
-            <div id="column-list">
-              <!-- Dynamic columns will be injected here -->
-            </div>
-            <button class="btn btn-ghost" id="btn-add-column" style="margin-top: 1rem;">
-              + Add another column
-            </button>
+        <!-- ── Section C: Column types (rendered dynamically per column) ── -->
+        <div class="wizard-page" id="interview-section-C">
+          <h2>C — What kind of data is in each column?</h2>
+          <div id="section-c-progress" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
+          <p class="wizard-page-desc">We'll go through each column one at a time. Answer all the questions for this column before moving on.</p>
+          <div id="section-c-column-panel"></div>
+
+          <!-- Date ordering rule (shown after all columns typed) -->
+          <div id="qc5-date-order-section" style="display:none;margin-top:2rem;">
+            <h3 style="font-size:1rem;">Date ordering rules (optional)</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Must any date column always come before another? e.g. "Course Start Date" must be before "Withdrawal Date".</p>
+            <div id="qc5-rules-list"></div>
+            <button type="button" class="btn-ghost btn-small" id="qc5-add-rule" style="margin-top:0.5rem;">+ Add date ordering rule</button>
           </div>
         </div>
 
-        <!-- STEP 3: Cross-column checks -->
-        <div class="wizard-page" id="wizard-page-3">
-          <h2>Cross-Column Checks</h2>
-          <p class="wizard-page-desc">Check relationships between columns.</p>
-          
+        <!-- ── Section D: Missing values ─────────────────────────────── -->
+        <div class="wizard-page" id="interview-section-D">
+          <h2>D — Missing values</h2>
+          <p class="wizard-page-desc">For each column with missing values, say what represents "missing" and what to do with those records.</p>
+          <div id="section-d-panels"></div>
+          <p id="section-d-empty" style="color:var(--text-muted);font-style:italic;display:none;">No columns flagged as having missing values. You can go back to Section C to flag them, or continue.</p>
+        </div>
+
+        <!-- ── Section E: Rename columns ─────────────────────────────── -->
+        <div class="wizard-page" id="interview-section-E">
+          <h2>E — Renaming columns</h2>
+          <p class="wizard-page-desc">Do you want to rename any columns in the cleaned output? Leave blank to keep the original name.</p>
+          <div id="section-e-panels"></div>
+        </div>
+
+        <!-- ── Section F: Cleaning actions ───────────────────────────── -->
+        <div class="wizard-page" id="interview-section-F">
+          <h2>F — Cleaning actions</h2>
+          <p class="wizard-page-desc">For each selected column, choose any additional cleaning actions to apply.</p>
+          <div id="section-f-panels"></div>
+        </div>
+
+        <!-- ── Section G: Recode and regroup ─────────────────────────── -->
+        <div class="wizard-page" id="interview-section-G">
+          <h2>G — Recoding and regrouping</h2>
+          <p class="wizard-page-desc">Map old values to new ones, or band numeric values into groups.</p>
+
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label>Which columns do you want to recode or regroup?</label>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Select any that apply. Leave all unchecked to skip this section.</p>
+            <div id="qg-column-checkboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
+          </div>
+
+          <div id="section-g-panels"></div>
+        </div>
+
+        <!-- ── Section H: Output ─────────────────────────────────────── -->
+        <div class="wizard-page" id="interview-section-H">
+          <h2>H — Your cleaned file</h2>
+          <p class="wizard-page-desc">Tell us what to call the cleaned output and what format it should be in.</p>
+
           <div class="form-group">
-            <label>What do you want to do — and across which columns?</label>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-              Describe any logical rules, transformations, or reshaping. For example:<br>
-              — "Course Commence Date must be earlier than Withdrawal Date"<br>
-              — "If Extension Permission is Yes, a late submission date is acceptable"<br>
-              — "Group rows by Roll Number, pivot Booking Status into columns, count each category"
-            </p>
-            <textarea id="q-crosscol-desc" rows="5" placeholder="Describe your rules, checks, or data reshaping here..."></textarea>
+            <label for="qh-name">Name for the cleaned file</label>
+            <input type="text" id="qh-name" placeholder="e.g. student_register_cleaned">
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.3rem;">The file extension will be added automatically.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="qh-format">Output format</label>
+            <select id="qh-format">
+              <option value="same">Same as input file</option>
+              <option value="csv">CSV</option>
+              <option value="xlsx">Excel (.xlsx)</option>
+            </select>
+          </div>
+
+          <div style="background:rgba(52,84,99,0.06);padding:1rem 1.25rem;border-radius:var(--radius-md);margin-top:1rem;font-size:0.88rem;color:var(--navy-dark);">
+            <strong>📋 Every script includes a summary report</strong> — rows read and written; per column: values changed, missing values handled, duplicates found, unparseable dates, out-of-range numbers, unexpected categories. No raw data values are printed.
           </div>
         </div>
 
-        <!-- STEP 4: Link Datasets -->
-        <div class="wizard-page" id="wizard-page-4">
-          <h2>Link Datasets</h2>
-          <p class="wizard-page-desc">Configure how multiple datasets should be joined.</p>
-          
-          <div class="form-group">
-            <label>What problem will the linked dataset be answering?</label>
-            <textarea id="q-link-problem" rows="2" placeholder="e.g. We want to analyse students' assessment load by combining Enrolments and Outcomes"></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Name the datasets being joined</label>
-            <input type="text" id="q-link-names" placeholder="e.g. Enrolments and Module Outcomes">
-          </div>
-
-          <div class="form-group">
-            <label>Which dataset is the PRIMARY dataset? (Keep all records from this one)</label>
-            <input type="text" id="q-link-primary" placeholder="e.g. Enrolments">
-          </div>
-          
-          <div class="form-group">
-            <label>Which column(s) match records across datasets?</label>
-            <input type="text" id="q-link-keys" placeholder="e.g. Student ID">
-          </div>
-
-          <div class="form-group">
-            <label>Identifier consistency</label>
-            <select id="q-link-consistency">
-              <option value="identical">Identical formats</option>
-              <option value="different_formatting">Different formatting</option>
-              <option value="different_word_order">Different word order</option>
-              <option value="unsure">Unsure</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Match type</label>
-            <select id="q-link-match-type">
-              <option value="exact">Exact match</option>
-              <option value="normalised">Normalised (tidy then match)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Join type</label>
-            <select id="q-link-join-type">
-              <option value="all_from_first">Keep all from first</option>
-              <option value="only_matches">Only matches</option>
-              <option value="all_from_both">All from both</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>On duplicates / no match</label>
-            <select id="q-link-on-unmatched">
-              <option value="report_keep">Report and keep</option>
-              <option value="report_drop">Report and drop unmatched</option>
-              <option value="stop_warn">Stop and warn</option>
-            </select>
-          </div>
+        <!-- ── Final review screen ───────────────────────────────────── -->
+        <div class="wizard-page" id="interview-section-review">
+          <h2>Final review</h2>
+          <p class="wizard-page-desc">Check your brief below. Click any section heading to go back and edit. When you're happy, click <strong>Approve &amp; Generate</strong>.</p>
+          <div id="review-content" style="margin-bottom:2rem;"></div>
+          <div id="review-saving" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;display:none;">⏳ Saving your brief to your account…</div>
         </div>
+          <h2>General Information</h2>
+          <p class="wizard-page-desc">Tell us about the dataset you are working with.</p>
 
-        <!-- STEP 5: Confirmation -->
-        <div class="wizard-page" id="wizard-page-5">
-          <h2>Confirmation</h2>
-          <p class="wizard-page-desc">Review your choices before we generate the script.</p>
-          
-          <div class="confirmation-summary" id="confirmation-summary">
-            <!-- Filled by JS -->
-          </div>
 
-        </div>
-
-      </div>
-
-      <div class="wizard-footer" style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--grey-200); padding-top: 1.5rem;">
+      <div class="wizard-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:2rem;border-top:1px solid var(--grey-200);padding-top:1.5rem;">
         <button class="btn btn-ghost" id="wizard-btn-back" style="visibility:hidden;">← Back</button>
-        <button class="btn btn-primary" id="wizard-btn-next">Next →</button>
-        <button class="btn btn-primary" id="wizard-btn-submit" style="display:none;background:var(--sage);color:var(--navy-dark);">Generate Script</button>
+        <span id="interview-autosave-indicator" style="font-size:0.8rem;color:var(--text-muted);"></span>
+        <div style="display:flex;gap:0.75rem;">
+          <button class="btn btn-primary" id="wizard-btn-next">Next →</button>
+          <button class="btn btn-primary" id="wizard-btn-submit" style="display:none;background:var(--sage);color:var(--navy-dark);">Approve &amp; Generate</button>
+        </div>
       </div>
 
     </section>
@@ -724,7 +769,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="js/app.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="js/questionnaire.js"></script>
+<script type="module" src="js/interview.js"></script>
 <script type="module" src="js/firebase-config.js"></script>
 <script type="module" src="js/auth.js"></script>
 <!-- Show mobile menu button via JS media query -->

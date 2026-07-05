@@ -1,0 +1,34 @@
+Student ID,Module Code,Module Name,Academic Year,Assessment Type,Assessment Deadline,Assessment Complete Date,Extension Permission,Grade,Grade Format,Credit Value,Result Status,Submission Method
+STU001,CS501,Data Structures,2023/24,Coursework,15/01/2024,14/01/2024,No,72,0-100,20,Pass,Online
+STU001,CS502,Algorithms,2023/24,Exam,30/01/2024,30/01/2024,No,B,A-E,20,Pass,In Person
+STU002,DS701,Machine Learning,2023/24,Project,2024-02-20,25/02/2024,Yes,85,0-100,30,Pass,Online
+STU002,DS702,Statistics for DS,2023/24,Coursework,15/01/2024,18/01/2024,No,62,0-100,20,Pass,Online
+STU003,SO401,Social Theory,2023/24,Essay,12/01/2024,12-01-2024,No,C,A-E,20,Pass,Online
+STU003,SO402,Research Methods,2023/24,Coursework,20/02/2024,05/03/2024,No,D,A-E,20,FAIL,Online
+STU004,PS501,Cognitive Psychology,2023/24,Exam,22/01/2024,22/01/2024,No,pass,Pass/Fail,20,Pass,In Person
+STU004,PS502,Developmental Psych,2023/24,Coursework,10/02/2024,10/02/2024,No,Pass,Pass/Fail,20,Pass,Online
+STU005,IB701,Global Strategy,2023/24,Report,2024-01-30,2024-02-14,Yes,78,0-100,30,Pass,Online
+STU006,CS501,Data Structures,2023/24,Coursework,15/01/2024,13/01/2024,No,45,0-100,20,FAIL,Online
+STU006,CS502,Algorithms,2023/24,Exam,30/01/2024,30/01/2024,No,E,A-E,20,Fail,In Person
+STU007,SO601,Sociological Research,2023/24,Dissertation,2024-03-15,2024-03-18,YES,A,A-E,40,Pass,Online
+STU008,PS501,Cognitive Psychology,2023/24,Exam,22/01/2024,22/01/2024,No,67,0-100,20,Pass,In Person
+STU008,PS503,Abnormal Psychology,2023/24,Essay,05/02/2024,20/02/2024,no,C,A-E,20,Pass,Online
+STU009,DS701,Machine Learning,2023/24,Project,2024-02-20,2024-02-20,No,91,0-100,30,Pass,Online
+STU009,DS703,Big Data,2023/24,Coursework,2024-01-25,2024-01-30,No,88,0-100,20,Pass,Online
+STU010,CS501,Data Structures,2023/24,Coursework,15/01/2024,16/01/2024,No,55,0-100,20,pass,Online
+STU010,CS503,Software Engineering,2023/24,Project,28/02/2024,28/02/2024,No,B,A-E,30,Pass,Online
+STU011,PS401,Intro to Psychology,2023/24,Exam,20/01/2024,20/01/2024,No,PASS,Pass/Fail,20,Pass,In Person
+STU011,PS402,Research in Psych,2023/24,Coursework,15/02/2024,22/02/2024,yes,76,0-100,20,Pass,Online
+STU012,IB701,Global Strategy,2023/24,Report,2024-01-30,2024-01-28,No,N/A,0-100,30,Withdrawn,Online
+STU013,SO501,Urban Sociology,2023/24,Essay,18/01/2024,18/01/2024,No,B,A-E,20,Pass,Online
+STU014,CS601,Advanced Databases,2023/24,Project,25/02/2024,10/03/2024,N,88,0-100,30,Pass,Online
+STU015,PS401,Intro to Psychology,2023/24,Exam,20/01/2024,20/01/2024,No,fail,Pass/Fail,20,Fail,In Person
+stu015,PS402,Research in Psych,2023/24,Coursework,15/02/2024,14/02/2024,No,FAIL,Pass/Fail,20,Fail,Online
+STU016,DS701,Machine Learning,2023/24,Project,2024-02-20,2024-02-19,No,79,0-100,30,Pass,Online
+STU017,SO401,Social Theory,2023/24,Essay,12/01/2024,25/01/2024,no,D,A-E,20,Fail,Online
+STU018,CS601,Advanced Databases,2023/24,Project,25/02/2024,25/02/2024,No,pass,Pass/Fail,30,Pass,Online
+STU018,CS502,Algorithms,2023/24,Exam,30/01/2024,30/01/2024,No,71,0-100,20,Pass,In Person
+STU019,DS701,Machine Learning,2023/24,Project,2024-02-20,2024-03-05,yes,A,A-E,30,Pass,Online
+STU020,PS501,Cognitive Psychology,2023/24,Exam,22/01/2024,22/01/2024,No,82,0-100,20,Pass,In Person
+STU020,PS504,Health Psychology,2023/24,Essay,10/02/2024,10/02/2024,No,C,A-E,20,Pass,Online
+STU021,CS501,Data Structures,2023/24,Coursework,15/01/2024,14/01/2024,No,68,0-100,20,Pass,Online

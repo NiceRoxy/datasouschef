@@ -1,0 +1,21 @@
+Student ID,First Name,Last Name,Date of Birth,Gender,Ethnicity,Programme,Level,Register Date,Register Status,Fee Status,Mode of Study,Personal Tutor,Email
+STU001,James,Smith,12/05/2003,Male,White British,BSc Computer Science,Level 5,01-Sep-2023,active,Home,Full Time,Dr. Adams,james.smith@uni.ac.uk
+STU002,Priya,Patel,1990-07-22,Female,Asian - Indian,MSc Data Science,Level 7,15/09/2023,Active,Home,full-time,Dr. Chan,p.patel@uni.ac.uk
+STU003,Marcus,Johnson,03-11-2001,M,Black Caribbean,BA Sociology,Level 4,2023/09/18,ACTIVE,Overseas,Part Time,Prof. Hughes,marcus.j@uni.ac.uk
+STU004,Sophie,Williams,22/04/2002,female,White Other,BSc Psychology,Level 5,01-Sep-2023,Withdrwal,Home,Full Time,Dr. Adams,sophie.w@uni.ac.uk
+STU005,Yuki,Tanaka,1998-12-30,F,Asian - Other,MSc International Business,Level 7,15/09/2023,suspended,Overseas,Full-time,Dr. Chan,y.tanaka@uni.ac.uk
+STU006,Chris,Taylor,,Male,Mixed White and Black,BSc Computer Science,Level 5,01/09/2023,Active,Home,Full Time,Dr. Adams,c.taylor@uni.ac.uk
+STU007,Amara,Osei,08/02/2000,Female,Black African,BA Sociology,Level 6,18-Sep-2023,active,Home,Part time,Prof. Hughes,amara.o@uni.ac.uk
+STU008,Leon,Brown,14/09/1999,Male,White British,BSc Psychology,Level 5,01-Sep-2023,Interrupted,Home,Full Time,Dr. Adams,leon.b@uni.ac.uk
+STU009,Fatima,Al-Hassan,2002-05-19,Female,Arab,MSc Data Science,Level 7,15/09/2023,active,Overseas,Full Time,Dr. Chan,f.alhassan@uni.ac.uk
+STU010,Raj,Kumar,30/06/2001,Male,Asian - Pakistani,BSc Computer Science,Level 5,01-Sep-2023,active,Home,Full Time,Dr. Adams,r.kumar@uni.ac.uk
+STU011,Emily,Roberts,17/11/2003,Female,White British,BSc Psychology,Level 4,2023/09/01,Active,Home,Full Time,Dr. Blake,emily.r@uni.ac.uk
+STU012,Tom,Hughes,1997-03-05,Male,Unknown,MSc International Business,Level 7,15/09/2023,WITHDRAWN,Home,full time,Dr. Chan,t.hughes@uni.ac.uk
+STU013,Nina,Schmidt,25-08-2001,Female,White European,BA Sociology,Level 5,18/09/2023,active,Overseas,Part Time,Prof. Hughes,nina.s@uni.ac.uk
+STU014,David,Chen,1999-10-11,Male,Chinese,BSc Computer Science,Level 6,01-Sep-2023,Suspend,Home,Full Time,Dr. Adams,d.chen@uni.ac.uk
+stu015,Sarah,Moore,04/01/2002,Female,Mixed Other,BSc Psychology,Level 4,01/09/2023,active,Home,Full Time,Dr. Blake,s.moore@uni.ac.uk
+STU016,Omar,Hassan,2000-06-28,Male,Arab,MSc Data Science,Level 7,15/09/2023,Active,Overseas,Full Time,Dr. Chan,o.hassan@uni.ac.uk
+STU017,Chloe,Evans,12/03/2004,Female,White Welsh,BA Sociology,Level 4,18-Sep-2023,active,Home,Full Time,Prof. Hughes,chloe.e@uni.ac.uk
+STU018,Ben,Wright,1998-09-01,Male,White British,BSc Computer Science,Level 6,01/09/2023,Defer,Home,Part Time,Dr. Adams,b.wright@uni.ac.uk
+STU019,Mei,Lin,07/07/2000,F,Chinese,MSc Data Science,Level 7,2023-09-15,active,Overseas,Full Time,Dr. Chan,m.lin@uni.ac.uk
+STU020,Aisha,Diallo,23/12/1999,Female,Black African,BSc Psychology,Level 5,01-Sep-2023,Active,Overseas,Full Time,Dr. Blake,a.diallo@uni.ac.uk
