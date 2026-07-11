@@ -28,7 +28,7 @@ let state = {
     file_name: '', file_format: 'csv', sheet_name: null,
     has_header: true, row_count_estimate: 'unknown', encoding: 'utf-8',
     columns: [], date_order_rules: [],
-    output_name: 'cleaned', output_format: 'same'
+    output_name: 'cleaned', output_format: 'csv'
   }
 };
 

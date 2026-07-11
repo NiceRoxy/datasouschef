@@ -89,14 +89,46 @@ def _col_block(col: ColumnSpec) -> str:
 
     # ── Recode to different type (v2) ─────────────────────────────────────────
     if col.col_type == 'recode' and col.recode_to_type:
-        lines.append(
-            f'  RECODE: Keep original column "{col.name}" unchanged. '
-            f'Create a NEW column named "{col.name}-New" of type {col.recode_to_type}. '
-            f'Apply the mapping below to populate the new column.'
-        )
+        # Build the mapping dict from the free-text value_mapping field
+        mapping_pairs = []
+        if col.value_mapping and col.value_mapping.strip():
+            for line in col.value_mapping.strip().splitlines():
+                line = line.strip()
+                sep = '→' if '→' in line else ('->' if '->' in line else None)
+                if sep:
+                    parts = line.split(sep, 1)
+                    if len(parts) == 2:
+                        old_val = parts[0].strip()
+                        new_val = parts[1].strip()
+                        mapping_pairs.append((old_val, new_val))
 
-    # ── Value mapping (v2 free-text format) ───────────────────────────────────
-    if col.value_mapping and col.value_mapping.strip():
+        unmapped = col.unmapped_action or 'system_missing'
+        if unmapped == 'keep':
+            na_action = f"df['{col.name}'].astype(str)"
+        else:
+            na_action = "pd.NA"
+
+        if mapping_pairs:
+            dict_repr = '{' + ', '.join(f"'{k}': '{v}'" for k, v in mapping_pairs) + '}'
+            lines.append(
+                f'  RECODE — use this exact Python pattern:\n'
+                f'    mapping_{col.name.replace(" ","_")} = {dict_repr}\n'
+                f'    # Cast source to str so numeric codes like 1/2 match string keys\n'
+                f'    new_col = df[\'{col.name}\'].astype(str).map(mapping_{col.name.replace(" ","_")})\n'
+                f'    # Insert new column immediately after the original\n'
+                f'    insert_pos = df.columns.get_loc(\'{col.name}\') + 1\n'
+                f'    df.insert(insert_pos, \'{col.name}-New\', new_col)\n'
+                f'    # Original column \'{col.name}\' is NOT modified.\n'
+                f'    # Unmapped values become: {unmapped}'
+            )
+        else:
+            lines.append(
+                f'  RECODE: Create column "{col.name}-New" inserted after "{col.name}". '
+                f'No mapping provided — populate with NaN.'
+            )
+
+    # ── Value mapping for non-recode columns ──────────────────────────────────
+    elif col.value_mapping and col.value_mapping.strip():
         lines.append('  Value mapping (apply in order):')
         for line in col.value_mapping.strip().splitlines():
             line = line.strip()
@@ -112,6 +144,7 @@ def _col_block(col: ColumnSpec) -> str:
             lines.append(f'  Values not in mapping: {col.unmapped_custom}')
         else:
             lines.append('  Values not in mapping: set to NaN/system missing.')
+
 
     # ── Legacy category_map (v1) ──────────────────────────────────────────────
     elif col.category_map:
@@ -234,29 +267,29 @@ def _section_date_order(rules: list) -> str:
 
 
 def _section_h(c: DataContract) -> str:
-    # Determine output extension explicitly
-    if c.output_format == 'same':
-        import os
-        _, ext = os.path.splitext(c.file_name)
-        out_ext = ext.lstrip('.') or 'csv'
+    # Resolve output extension — CSV is the default for all internal reporting
+    if c.output_format in ('same', 'csv', ''):
+        out_ext = 'csv'
+        save_instruction = (
+            f"df.to_csv('{c.output_name}.csv', index=False, encoding='utf-8')"
+        )
     else:
         out_ext = c.output_format
+        save_instruction = (
+            f"df.to_excel('{c.output_name}.xlsx', index=False, engine='openpyxl')"
+        )
     out_file = f"{c.output_name}.{out_ext}"
-    fmt_note = (
-        f"Save as '{out_file}'. "
-        f"Use pd.DataFrame.to_csv('{out_file}', index=False) for CSV, "
-        f"or pd.DataFrame.to_excel('{out_file}', index=False, engine='openpyxl') for XLSX. "
-        f"The file must open cleanly in Excel / pandas."
-    )
     return (
         f"## Output\n"
-        f"{fmt_note}\n"
+        f"Save the cleaned DataFrame using exactly this call: {save_instruction}\n"
+        f"Output file: '{out_file}' — do NOT change the filename or extension.\n"
         f"Print a summary report: rows read, rows written; per column — "
         f"values changed, missing values handled, duplicates found, "
         f"unparseable dates, out-of-range numbers, unexpected categories. "
         f"Final line: \"Checks passed\" or \"N issues found\".\n"
         f"Do NOT print any raw data values in the report.\n"
     )
+
 
 
 def build_prompt(contract: DataContract) -> str:
