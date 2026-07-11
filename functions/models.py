@@ -18,55 +18,59 @@ class RecodeRow(BaseModel):
 # ── Per-column spec ───────────────────────────────────────────────────────────
 
 class ColumnSpec(BaseModel):
-    """All interview answers for one column (Sections B–G)."""
+    """All interview answers for one column (consolidated Section C v2)."""
 
     # QB — column identity
     name: str = Field(..., description="Exact column header as detected/entered")
-    selected: bool = Field(True, description="QB.2 — whether to apply rules to this column")
+    selected: bool = Field(True, description="Whether to apply rules to this column")
 
     # QC.0 — data type
     col_type: str = Field(
         "text",
-        description="id | date | number | category | text"
+        description="id | date | number | category | text | recode"
     )
 
-    # QE.1 — rename
+    # Recode target type (v2)
+    recode_to_type: Optional[str] = Field(None, description="Target type when col_type='recode'")
+
+    # Rename (was Section E, now part of Section C v2)
     rename_to: Optional[str] = Field(None, description="New column name after cleaning")
 
-    # C-ID fields (QC.1 – QC.2)
-    must_be_unique: Optional[str] = Field(None, description="yes | no | unsure")
-    on_duplicate: Optional[str] = Field(None, description="report | remove")
-    keep_duplicate: Optional[str] = Field(None, description="first | last | latest_date:<col>")
-    id_case: Optional[str] = Field(None, description="upper | lower | none")
+    # ── v2 unified mapping fields ─────────────────────────────────────────────
+    # Free-text mapping: 'old → new' lines
+    value_mapping: str = Field("", description="Value mapping as free text, one 'old → new' per line")
+    unmapped_action: str = Field("system_missing", description="system_missing | keep | other")
+    unmapped_custom: str = Field("", description="Description when unmapped_action='other'")
 
-    # C-Date fields (QC.3 – QC.4)
-    date_format_in: Optional[str] = Field(None, description="DD/MM/YYYY | MM/DD/YYYY | YYYY-MM-DD | mixed | unsure")
-    date_format_out: Optional[str] = Field(None, description="YYYY-MM-DD | DD/MM/YYYY | keep")
+    # Missing values (v2: has_missing bool + sentinels as string)
+    has_missing: bool = Field(False, description="Whether column has missing values")
+    missing_sentinels: Optional[str] = Field(None, description="Comma-separated sentinel values, e.g. 'blank, NA, 99'")
+    missing_action: Optional[str] = Field(None, description="blank | zero | mean | median | remove | unknown | zero_str | custom")
+    missing_custom: str = Field("", description="Replacement value when missing_action='custom'")
 
-    # C-Number fields (QC.6 – QC.8)
-    decimal_places: Optional[int] = Field(None, description="Number of decimal places, or None for integers")
-    rounding: Optional[str] = Field(None, description="half_up | keep")
-    numeric_symbols: Optional[List[str]] = Field(None, description="Symbols to strip before conversion, e.g. ['£','%',',']")
-    valid_min: Optional[float] = Field(None, description="QC.8 lower bound for range check (report only)")
-    valid_max: Optional[float] = Field(None, description="QC.8 upper bound for range check (report only)")
+    # Strip characters (v2)
+    strip_chars: str = Field("", description="Characters to strip from values")
 
-    # C-Category fields (QC.9 – QC.11)
-    valid_values: Optional[List[str]] = Field(None, description="QC.9 canonical value list")
-    category_map: Optional[Dict[str, str]] = Field(None, description="QC.10 variant → canonical mapping")
-    on_unmapped_category: Optional[str] = Field(None, description="report | set_unknown | keep")
-
-    # Section D — missing values
-    missing_sentinels: Optional[List[str]] = Field(None, description="QD.2 values that mean 'missing', e.g. ['','NA','99']")
-    missing_action: Optional[str] = Field(None, description="QD.3: standardise | replace:<label> | remove_record | report_only")
-
-    # Section F — cleaning actions
-    capitalisation: Optional[str] = Field(None, description="upper | lower | title | none")
-    remove_chars: Optional[str] = Field(None, description="Characters or patterns to strip")
-    collapse_spaces: Optional[bool] = Field(None, description="Collapse repeated internal spaces (opt-in for text columns)")
-
-    # Section G — recode / regroup
-    recode_map: Optional[List[RecodeRow]] = Field(None, description="QG.2 ordered mapping rules")
-    recode_catchall: Optional[str] = Field(None, description="QG.3: keep | set_unknown | report")
+    # ── Legacy v1 fields (kept for backward compat, ignored if v2 fields present) ──
+    must_be_unique: Optional[str] = Field(None)
+    on_duplicate: Optional[str] = Field(None)
+    keep_duplicate: Optional[str] = Field(None)
+    id_case: Optional[str] = Field(None)
+    date_format_in: Optional[str] = Field(None)
+    date_format_out: Optional[str] = Field(None)
+    decimal_places: Optional[int] = Field(None)
+    rounding: Optional[str] = Field(None)
+    numeric_symbols: Optional[List[str]] = Field(None)
+    valid_min: Optional[float] = Field(None)
+    valid_max: Optional[float] = Field(None)
+    valid_values: Optional[List[str]] = Field(None)
+    category_map: Optional[Dict[str, str]] = Field(None)
+    on_unmapped_category: Optional[str] = Field(None)
+    capitalisation: Optional[str] = Field(None)
+    remove_chars: Optional[str] = Field(None)
+    collapse_spaces: Optional[bool] = Field(None)
+    recode_map: Optional[List[RecodeRow]] = Field(None)
+    recode_catchall: Optional[str] = Field(None)
 
 
 # ── Cross-column date ordering ────────────────────────────────────────────────
