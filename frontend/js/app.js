@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     if (crumb) crumb.textContent = labels[viewId] || viewId;
 
+    // Notify modules of view change
+    document.dispatchEvent(new CustomEvent('dsc:show-view', { detail: { viewId } }));
+
     // Close mobile sidebar on navigation
     closeSidebar();
   }
@@ -260,7 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Default view: execute at the very end after all variables are initialized to avoid TDZ ReferenceError.
+  // New task shortcut in My Scripts empty state
+  document.getElementById('new-task-shortcut')?.addEventListener('click', () => showView('home'));
+
+  // Default view
   showView('dashboard');
 
 });

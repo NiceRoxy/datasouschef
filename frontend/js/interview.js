@@ -1,32 +1,25 @@
-/**
- * interview.js — DataSousChef Guided Interview Engine
- * Implements the full A–H interview from DataSousChef_Interview_Script_v1.md
- * Saves state to Firebase Firestore after each section.
+﻿/**
+ * interview.js — DataSousChef Interview Engine v2
+ * Sections: A → B → C (merged D/E/F/G) → H → review
  */
 
 import { auth } from './firebase-config.js';
+import { generateReportingScript } from './reporting-generator.js';
 
-// Lazy Firestore loader — never blocks module init
+// Lazy Firestore loader
 let _db = null;
 async function getDb() {
   if (_db) return _db;
-  try {
-    const cfg = await import('./firebase-config.js');
-    _db = cfg.db || null;
-  } catch (e) { /* non-fatal */ }
+  try { const cfg = await import('./firebase-config.js'); _db = cfg.db || null; } catch {}
   return _db;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
+// ── Constants ──────────────────────────────────────────────────────────────────
 const BACKEND_URL = 'https://generate-script-dnrmsfmerq-nw.a.run.app';
-const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'review'];
+const SECTIONS = ['A', 'B', 'C', 'H', 'review'];
+const safeId = name => 'col_' + String(name).replace(/[^a-zA-Z0-9]/g, '_');
 
-// Sanitize column names for use in HTML element IDs / CSS selectors
-const safeId = name => 'col_' + name.replace(/[^a-zA-Z0-9]/g, '_');
-
-// ── State ─────────────────────────────────────────────────────────────────────
-
+// ── State ──────────────────────────────────────────────────────────────────────
 let state = {
   currentSection: 'A',
   currentColIndex: 0,
@@ -34,22 +27,18 @@ let state = {
   contract: {
     file_name: '', file_format: 'csv', sheet_name: null,
     has_header: true, row_count_estimate: 'unknown', encoding: 'utf-8',
-    columns: [],
-    date_order_rules: [],
+    columns: [], date_order_rules: [],
     output_name: 'cleaned', output_format: 'same'
   }
 };
 
-// ── Firestore helpers ─────────────────────────────────────────────────────────
-
+// ── Firestore helpers ──────────────────────────────────────────────────────────
 async function saveToFirestore() {
-  const user = auth.currentUser;
-  if (!user) return;
-  const indicator = document.getElementById('interview-autosave-indicator');
-  if (indicator) indicator.textContent = '⏳ Saving…';
+  const user = auth.currentUser; if (!user) return;
+  const ind = document.getElementById('interview-autosave-indicator');
+  if (ind) ind.textContent = '⏳ Saving…';
   try {
-    const db = await getDb();
-    if (!db) { if (indicator) indicator.textContent = ''; return; }
+    const db = await getDb(); if (!db) { if (ind) ind.textContent = ''; return; }
     const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     await setDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'), {
       updatedAt: new Date().toISOString(),
@@ -57,88 +46,86 @@ async function saveToFirestore() {
       currentColIndex: state.currentColIndex,
       contract: state.contract
     });
-    if (indicator) indicator.textContent = '✓ Saved';
-    setTimeout(() => { if (indicator) indicator.textContent = ''; }, 2500);
-  } catch (e) {
-    console.warn('Firestore save failed:', e);
-    if (indicator) indicator.textContent = '';
-  }
+    if (ind) { ind.textContent = '✓ Saved'; setTimeout(() => { if (ind) ind.textContent = ''; }, 2500); }
+  } catch (e) { console.warn('Firestore save failed:', e); if (ind) ind.textContent = ''; }
 }
 
 async function loadFromFirestore() {
-  const user = auth.currentUser;
-  if (!user) return false;
+  const user = auth.currentUser; if (!user) return false;
   try {
-    const db = await getDb();
-    if (!db) return false;
+    const db = await getDb(); if (!db) return false;
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     const snap = await getDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'));
     if (snap.exists()) {
-      const data = snap.data();
-      state.currentSection = data.currentSection || 'A';
-      state.currentColIndex = data.currentColIndex || 0;
-      state.contract = data.contract || state.contract;
+      const d = snap.data();
+      state.currentSection = d.currentSection || 'A';
+      state.currentColIndex = d.currentColIndex || 0;
+      state.contract = d.contract || state.contract;
       return true;
     }
-  } catch (e) {
-    console.warn('Firestore load failed:', e);
-  }
+  } catch (e) { console.warn('Firestore load failed:', e); }
   return false;
 }
 
 async function clearFirestoreDraft() {
-  const user = auth.currentUser;
-  if (!user) return;
+  const user = auth.currentUser; if (!user) return;
   try {
-    const db = await getDb();
-    if (!db) return;
+    const db = await getDb(); if (!db) return;
     const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     await deleteDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'));
-  } catch (e) { /* non-fatal */ }
+  } catch {}
 }
 
-// ── Column spec helpers ───────────────────────────────────────────────────────
+async function saveScriptToFirestore(cleanScript, reportScript) {
+  const user = auth.currentUser; if (!user) return null;
+  try {
+    const db = await getDb(); if (!db) return null;
+    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+    const ref = await addDoc(collection(db, 'users', user.uid, 'scripts'), {
+      name: state.contract.output_name || 'cleaned',
+      createdAt: new Date().toISOString(),
+      cleaningScript: cleanScript,
+      reportingScript: reportScript,
+      contract: state.contract
+    });
+    return ref.id;
+  } catch (e) { console.warn('Script save failed:', e); return null; }
+}
 
+// ── Column helpers ─────────────────────────────────────────────────────────────
 function getOrCreateCol(name) {
   let col = state.contract.columns.find(c => c.name === name);
   if (!col) {
     col = {
-      name, selected: true, col_type: 'text',
-      rename_to: null,
-      must_be_unique: null, on_duplicate: null, keep_duplicate: null, id_case: null,
-      date_format_in: null, date_format_out: 'YYYY-MM-DD',
-      decimal_places: null, rounding: 'half_up', numeric_symbols: null,
-      valid_min: null, valid_max: null,
-      valid_values: null, category_map: null, on_unmapped_category: 'report',
-      missing_sentinels: null, missing_action: 'standardise',
-      capitalisation: null, remove_chars: null, collapse_spaces: null,
-      recode_map: null, recode_catchall: 'keep'
+      name, selected: true, col_type: 'text', recode_to_type: null,
+      rename_to: null, value_mapping: '', unmapped_action: 'system_missing', unmapped_custom: '',
+      has_missing: false, missing_sentinels: '', missing_action: 'blank', missing_custom: '',
+      strip_chars: ''
     };
     state.contract.columns.push(col);
   }
   return col;
 }
 
-function selectedCols() {
-  return state.contract.columns.filter(c => c.selected);
-}
+function selectedCols() { return state.contract.columns.filter(c => c.selected); }
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-
-function showSection(sectionId) {
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function showSection(id) {
   document.querySelectorAll('.wizard-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
-  const page = document.getElementById(`interview-section-${sectionId}`);
-  if (page) page.classList.add('active');
-  const step = document.querySelector(`.wizard-step[data-section="${sectionId}"]`);
-  if (step) step.classList.add('active');
+  document.getElementById(`interview-section-${id}`)?.classList.add('active');
+  document.querySelector(`.wizard-step[data-section="${id}"]`)?.classList.add('active');
 
+  const idx = SECTIONS.indexOf(id);
   const btnBack = document.getElementById('wizard-btn-back');
   const btnNext = document.getElementById('wizard-btn-next');
   const btnSubmit = document.getElementById('wizard-btn-submit');
-  const idx = SECTIONS.indexOf(sectionId);
+  const btnPrev = document.getElementById('wizard-btn-prev-col');
+
   if (btnBack) btnBack.style.visibility = idx === 0 ? 'hidden' : 'visible';
-  if (sectionId === 'review') {
+  if (btnPrev) btnPrev.style.display = 'none'; // reset; renderSectionC will show if needed
+
+  if (id === 'review') {
     if (btnNext) btnNext.style.display = 'none';
     if (btnSubmit) btnSubmit.style.display = 'block';
     buildReview();
@@ -147,21 +134,14 @@ function showSection(sectionId) {
     if (btnSubmit) btnSubmit.style.display = 'none';
   }
 
-  if (sectionId === 'C') renderSectionC();
-  if (sectionId === 'D') renderSectionD();
-  if (sectionId === 'E') renderSectionE();
-  if (sectionId === 'F') renderSectionF();
-  if (sectionId === 'G') renderSectionG();
+  if (id === 'C') renderSectionC();
 }
 
 function nextSection() {
   collectCurrentSection();
   const idx = SECTIONS.indexOf(state.currentSection);
+  if (state.currentSection === 'C' && !state.allColsDone) { advanceColumnC(); return; }
   if (idx < SECTIONS.length - 1) {
-    if (state.currentSection === 'C' && !state.allColsDone) {
-      advanceColumnC();
-      return;
-    }
     state.currentSection = SECTIONS[idx + 1];
     state.currentColIndex = 0;
     showSection(state.currentSection);
@@ -179,51 +159,54 @@ function prevSection() {
   }
 }
 
-// ── Section A ─────────────────────────────────────────────────────────────────
+function prevColumn() {
+  const cols = selectedCols();
+  if (state.currentColIndex > 0) {
+    collectColPanel(cols[state.currentColIndex], document.getElementById('section-c-column-panel'));
+    state.currentColIndex--;
+    state.allColsDone = false;
+    renderSectionC();
+  }
+}
 
+// ── Section A ──────────────────────────────────────────────────────────────────
 function collectA() {
   state.contract.file_name = document.getElementById('qa-filename')?.value.trim() || '';
   state.contract.file_format = document.getElementById('qa-format')?.value || 'csv';
-  const sheet = document.getElementById('qa-sheet')?.value.trim();
-  state.contract.sheet_name = sheet || null;
-  state.contract.has_header = document.getElementById('qa-header')?.value === 'yes';
+  state.contract.sheet_name = document.getElementById('qa-sheet')?.value.trim() || null;
+  state.contract.has_header = document.getElementById('qa-header')?.value !== 'no';
   state.contract.row_count_estimate = document.getElementById('qa-rows')?.value || 'unknown';
   state.contract.encoding = document.getElementById('qa-encoding')?.value || 'utf-8';
   if (!state.contract.output_name || state.contract.output_name === 'cleaned') {
     const stem = state.contract.file_name.replace(/\.[^.]+$/, '') || 'cleaned';
     state.contract.output_name = stem + '_cleaned';
-    const nameInput = document.getElementById('qh-name');
-    if (nameInput && !nameInput.value) nameInput.value = state.contract.output_name;
+    const ni = document.getElementById('qh-name');
+    if (ni && !ni.value) ni.value = state.contract.output_name;
   }
 }
 
-// ── Section B ─────────────────────────────────────────────────────────────────
-
+// ── Section B ──────────────────────────────────────────────────────────────────
 function initSectionB() {
   const fileInput = document.getElementById('qb-file-upload');
-  const status = document.getElementById('qb-file-status');
-  const preview = document.getElementById('qb-column-preview');
-  const manualArea = document.getElementById('qb-manual-cols');
-  const selectionArea = document.getElementById('qb-selection-area');
-  const checkboxesEl = document.getElementById('qb-column-checkboxes');
-
+  const status    = document.getElementById('qb-file-status');
+  const preview   = document.getElementById('qb-column-preview');
+  const manual    = document.getElementById('qb-manual-cols');
+  const selArea   = document.getElementById('qb-selection-area');
+  const cbBox     = document.getElementById('qb-column-checkboxes');
   if (!fileInput) return;
 
-  function renderColumnCheckboxes(headers) {
+  function renderCBs(headers) {
     headers.forEach(h => getOrCreateCol(h));
-    checkboxesEl.innerHTML = '';
+    cbBox.innerHTML = '';
     state.contract.columns.forEach(col => {
-      const label = document.createElement('label');
-      label.style.cssText = 'display:flex;align-items:center;gap:0.4rem;cursor:pointer;background:var(--bg-body);border:1px solid var(--grey-200);border-radius:999px;padding:0.25rem 0.75rem;font-size:0.85rem;';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = col.selected;
-      cb.addEventListener('change', () => { col.selected = cb.checked; });
-      label.appendChild(cb);
-      label.appendChild(document.createTextNode(col.name));
-      checkboxesEl.appendChild(label);
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex;align-items:center;gap:0.4rem;cursor:pointer;background:var(--bg-body);border:1px solid var(--grey-200);border-radius:999px;padding:0.25rem 0.75rem;font-size:0.85rem;';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = col.selected;
+      cb.addEventListener('change', () => col.selected = cb.checked);
+      lbl.appendChild(cb); lbl.appendChild(document.createTextNode(col.name));
+      cbBox.appendChild(lbl);
     });
-    if (selectionArea) selectionArea.style.display = 'block';
+    if (selArea) selArea.style.display = 'block';
     if (preview) {
       preview.innerHTML = `<p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;">${headers.length} columns detected:</p>` +
         `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;">${headers.map(h => `<span style="background:var(--mint);color:var(--navy-dark);font-size:0.78rem;padding:0.2rem 0.6rem;border-radius:999px;">${h}</span>`).join('')}</div>`;
@@ -232,718 +215,429 @@ function initSectionB() {
   }
 
   fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (status) status.textContent = 'Parsing file…';
+    const file = e.target.files[0]; if (!file) return;
+    if (status) status.textContent = 'Parsing…';
     const ext = file.name.split('.').pop().toLowerCase();
     if (ext === 'xlsx' || ext === 'xls') {
       const reader = new FileReader();
       reader.onload = ev => {
         try {
           const wb = XLSX.read(ev.target.result, { type: 'array' });
-          const sheet = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
           if (!rows.length) { if (status) status.textContent = 'Could not read file.'; return; }
           const headers = rows[0].map(h => String(h).trim()).filter(Boolean);
-          renderColumnCheckboxes(headers);
+          renderCBs(headers);
           if (status) { status.textContent = `✓ ${headers.length} columns from "${wb.SheetNames[0]}"`; status.style.color = 'var(--sage-dark)'; }
         } catch (err) { if (status) status.textContent = `Error: ${err.message}`; }
       };
       reader.readAsArrayBuffer(file);
     } else {
-      Papa.parse(file, {
-        header: true, preview: 5,
-        complete: results => {
-          if (results.meta && results.meta.fields) {
-            renderColumnCheckboxes(results.meta.fields);
-            if (status) { status.textContent = `✓ ${results.meta.fields.length} columns from CSV`; status.style.color = 'var(--sage-dark)'; }
-          } else {
-            if (status) status.textContent = 'Could not read CSV. Check the first row has column headings.';
-          }
+      Papa.parse(file, { header: true, preview: 5,
+        complete: r => {
+          if (r.meta?.fields) { renderCBs(r.meta.fields); if (status) { status.textContent = `✓ ${r.meta.fields.length} columns`; status.style.color = 'var(--sage-dark)'; } }
+          else if (status) status.textContent = 'Could not read CSV.';
         },
         error: err => { if (status) status.textContent = `Error: ${err.message}`; }
       });
     }
   });
 
-  if (manualArea) {
-    manualArea.addEventListener('blur', () => {
-      const lines = manualArea.value.split('\n').map(l => l.trim()).filter(Boolean);
-      if (lines.length) renderColumnCheckboxes(lines);
-    });
-  }
+  manual?.addEventListener('blur', () => {
+    const lines = manual.value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length) renderCBs(lines);
+  });
 
   document.getElementById('qb-select-all')?.addEventListener('click', () => {
     state.contract.columns.forEach(c => c.selected = true);
-    checkboxesEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+    cbBox.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
   });
   document.getElementById('qb-deselect-all')?.addEventListener('click', () => {
     state.contract.columns.forEach(c => c.selected = false);
-    checkboxesEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+    cbBox.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
   });
 
-  if (state.contract.columns.length) renderColumnCheckboxes(state.contract.columns.map(c => c.name));
+  if (state.contract.columns.length) renderCBs(state.contract.columns.map(c => c.name));
 }
 
-// ── Section C: per-column type panel ─────────────────────────────────────────
-
+// ── Section C: per-column card ─────────────────────────────────────────────────
 function renderSectionC() {
   const cols = selectedCols();
   const panel = document.getElementById('section-c-column-panel');
-  if (!cols.length) {
-    if (panel) panel.innerHTML = '<p style="color:var(--text-muted);">No columns selected. Go back to Section B to select columns.</p>';
-    state.allColsDone = true;
-    checkDateOrderVisibility();
-    return;
-  }
+  const btnPrev = document.getElementById('wizard-btn-prev-col');
+  const btnNext = document.getElementById('wizard-btn-next');
+  const progress = document.getElementById('section-c-progress');
 
-  if (state.currentColIndex >= cols.length) {
-    state.currentColIndex = cols.length - 1;
-    state.allColsDone = true;
+  if (!cols.length) {
+    if (panel) panel.innerHTML = '<p style="color:var(--text-muted);">No columns selected. Go back to Section B.</p>';
+    state.allColsDone = true; checkDateOrder(); return;
   }
+  if (state.currentColIndex >= cols.length) { state.currentColIndex = cols.length - 1; state.allColsDone = true; }
 
   const col = cols[state.currentColIndex];
-  const progress = document.getElementById('section-c-progress');
   if (progress) progress.textContent = `Column ${state.currentColIndex + 1} of ${cols.length}: "${col.name}"`;
-
-  if (panel) {
-    panel.innerHTML = buildColTypePanel(col);
-    attachColTypePanelListeners(col, panel);
-  }
-
-  const btnNext = document.getElementById('wizard-btn-next');
+  if (panel) { panel.innerHTML = buildColCard(col); attachColCardListeners(col, panel); }
+  if (btnPrev) btnPrev.style.display = state.currentColIndex > 0 ? 'block' : 'none';
   if (btnNext) {
-    if (state.currentColIndex < cols.length - 1) {
-      btnNext.textContent = 'Next column →';
-      state.allColsDone = false;
-    } else {
-      btnNext.textContent = 'Continue →';
-      state.allColsDone = true;
-    }
+    const isLast = state.currentColIndex >= cols.length - 1;
+    btnNext.textContent = isLast ? 'Continue →' : 'Next column →';
+    state.allColsDone = isLast;
   }
-
-  checkDateOrderVisibility();
+  checkDateOrder();
 }
 
-function buildColTypePanel(col) {
+function buildColCard(col) {
   const sid = safeId(col.name);
-  const typeOptions = ['id', 'date', 'number', 'category', 'text']
-    .map(t => `<option value="${t}" ${col.col_type === t ? 'selected' : ''}>${{id:'ID',date:'Date',number:'Number',category:'Category',text:'Leave as text'}[t]}</option>`)
-    .join('');
-  let typeSpecific = '';
-  if (col.col_type === 'id') typeSpecific = buildIdPanel(col);
-  else if (col.col_type === 'date') typeSpecific = buildDatePanel(col);
-  else if (col.col_type === 'number') typeSpecific = buildNumberPanel(col);
-  else if (col.col_type === 'category') typeSpecific = buildCategoryPanel(col);
+  const types = [['id','ID'],['date','Date'],['number','Number'],['category','Category'],['text','Text'],['recode','Recode to different type']];
+  const typeOpts = types.map(([v,l]) => `<option value="${v}" ${col.col_type===v?'selected':''}>${l}</option>`).join('');
+
+  const reTargets = [['id','ID'],['date','Date'],['number','Number'],['category','Category'],['text','Text']];
+  const reTargetOpts = reTargets.map(([v,l]) => `<option value="${v}" ${col.recode_to_type===v?'selected':''}>${l}</option>`).join('');
+  const showRecode = col.col_type === 'recode';
+
+  const missingActions = buildMissingActions(col);
+
   return `
-    <div class="column-card" style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1.5rem;">
+<div style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
+
+  <div class="form-group">
+    <label>What kind of data is in <strong>"${col.name}"</strong>?</label>
+    <select id="ctype-${sid}">${typeOpts}</select>
+  </div>
+
+  <div id="crecode-target-${sid}" style="${showRecode?'':'display:none;'}">
+    <div class="form-group">
+      <label>Recode into which type? <span style="font-size:0.82rem;color:var(--text-muted);">(original column is kept; a new column "${col.name}-New" will be created)</span></label>
+      <select id="crecode-into-${sid}">${reTargetOpts}</select>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Rename this column to (optional):</label>
+    <input type="text" id="crename-${sid}" placeholder="Leave blank to keep original name" value="${col.rename_to||''}">
+  </div>
+
+  <div class="form-group">
+    <label>Map variants to valid values <span style="font-size:0.82rem;color:var(--text-muted);">(format: <em>old value → new value</em>, one per line)</span></label>
+    <textarea id="cmap-${sid}" rows="4" placeholder="e.g.&#10;MALE → Male&#10;Female: 1, Male: 2&#10;01/01/2020 → 2020-01-01">${col.value_mapping||''}</textarea>
+  </div>
+
+  <div class="form-group">
+    <label>Values not in the mapping:</label>
+    <select id="cunmapped-${sid}">
+      <option value="system_missing" ${col.unmapped_action==='system_missing'||!col.unmapped_action?'selected':''}>Define as system missing</option>
+      <option value="keep" ${col.unmapped_action==='keep'?'selected':''}>Keep unchanged</option>
+      <option value="other" ${col.unmapped_action==='other'?'selected':''}>Other (please specify)</option>
+    </select>
+    <input type="text" id="cunmapped-custom-${sid}" placeholder="Specify how to handle unmapped values"
+      value="${col.unmapped_custom||''}"
+      style="margin-top:0.5rem;${col.unmapped_action==='other'?'':'display:none;'}">
+  </div>
+
+  <div class="form-group">
+    <label><input type="checkbox" id="chasmissing-${sid}" ${col.has_missing?'checked':''}> This column has missing values</label>
+    <div id="cmissing-panel-${sid}" style="${col.has_missing?'':'display:none;'}margin-top:0.75rem;padding:1rem;background:rgba(52,84,99,0.04);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:0.75rem;">
       <div class="form-group">
-        <label>What kind of data is in <strong>"${col.name}"</strong>?</label>
-        <select id="ctype-${sid}">${typeOptions}</select>
+        <label>What represents "missing"? <span style="font-size:0.82rem;color:var(--text-muted);">(comma-separated, e.g. blank, NA, 99)</span></label>
+        <input type="text" id="cmiss-sent-${sid}" value="${col.missing_sentinels||''}" placeholder="blank, NA, N/A">
       </div>
       <div class="form-group">
-        <label><input type="checkbox" id="chas-missing-${sid}" ${col.missing_sentinels ? 'checked' : ''}> This column has missing values</label>
-      </div>
-      <div id="type-specific-${sid}">${typeSpecific}</div>
-    </div>`;
-}
-
-function buildIdPanel(col) {
-  const sid = safeId(col.name);
-  return `
-    <div class="form-group">
-      <label>Should every record have a different value? (Must be unique?)</label>
-      <select id="cid-unique-${sid}">
-        <option value="yes" ${col.must_be_unique==='yes'?'selected':''}>Yes, must be unique</option>
-        <option value="no" ${col.must_be_unique==='no'?'selected':''}>No, repeats are expected</option>
-        <option value="unsure" ${col.must_be_unique==='unsure'?'selected':''}>Not sure</option>
-      </select>
-    </div>
-    <div id="cid-dup-panel-${sid}" ${col.must_be_unique!=='yes'?'style="display:none;"':''}>
-      <div class="form-group">
-        <label>If duplicates are found:</label>
-        <select id="cid-dup-${sid}">
-          <option value="report" ${col.on_duplicate==='report'?'selected':''}>Count and list in report only</option>
-          <option value="remove" ${col.on_duplicate==='remove'?'selected':''}>Remove duplicate records</option>
-        </select>
-      </div>
-      <div id="cid-keep-panel-${sid}" ${col.on_duplicate!=='remove'?'style="display:none;"':''}>
-        <div class="form-group">
-          <label>Which record to keep?</label>
-          <select id="cid-keep-${sid}">
-            <option value="first" ${col.keep_duplicate==='first'?'selected':''}>First occurrence</option>
-            <option value="last" ${col.keep_duplicate==='last'?'selected':''}>Last occurrence</option>
-          </select>
-        </div>
+        <label>What should happen to missing values?</label>
+        <select id="cmiss-action-${sid}">${missingActions}</select>
+        <input type="text" id="cmiss-custom-${sid}" placeholder="Enter replacement value"
+          value="${col.missing_custom||''}"
+          style="margin-top:0.5rem;${col.missing_action==='custom'?'':'display:none;'}">
       </div>
     </div>
+  </div>
+
+  <div id="cstrip-group-${sid}" style="${['text','category','recode'].includes(col.col_type)?'':'display:none;'}">
     <div class="form-group">
-      <label>Standardise ID case to:</label>
-      <select id="cid-case-${sid}">
-        <option value="none" ${col.id_case==='none'||!col.id_case?'selected':''}>Keep as is</option>
-        <option value="upper" ${col.id_case==='upper'?'selected':''}>UPPERCASE</option>
-        <option value="lower" ${col.id_case==='lower'?'selected':''}>lowercase</option>
-      </select>
-    </div>`;
+      <label>Strip these characters from values (optional):</label>
+      <input type="text" id="cstrip-${sid}" placeholder="e.g. # * ?" value="${col.strip_chars||''}">
+    </div>
+  </div>
+
+</div>`;
 }
 
-function buildDatePanel(col) {
-  const sid = safeId(col.name);
-  const fmts = ['DD/MM/YYYY','MM/DD/YYYY','YYYY-MM-DD','mixed','unsure'];
-  const fmtOpts = fmts.map(f => `<option value="${f}" ${col.date_format_in===f?'selected':''}>${f}</option>`).join('');
-  const outFmts = ['YYYY-MM-DD','DD/MM/YYYY','keep'];
-  const outOpts = outFmts.map(f => `<option value="${f}" ${col.date_format_out===f?'selected':''}>${f==='keep'?'Keep as they are':f}</option>`).join('');
-  return `
-    <div class="form-group">
-      <label>What format do dates arrive in?</label>
-      <select id="cdate-in-${sid}">${fmtOpts}</select>
-    </div>
-    <div class="form-group">
-      <label>What format should dates be in after cleaning?</label>
-      <select id="cdate-out-${sid}">${outOpts}</select>
-    </div>`;
+function buildMissingActions(col) {
+  const type = col.col_type === 'recode' ? (col.recode_to_type || 'text') : col.col_type;
+  const cur = col.missing_action || 'blank';
+  const sel = v => cur === v ? 'selected' : '';
+  const base = `
+    <option value="blank" ${sel('blank')}>Blank / system missing (flag in report)</option>
+    <option value="remove" ${sel('remove')}>Remove the record</option>
+    <option value="custom" ${sel('custom')}>Custom value…</option>`;
+  if (type === 'number') return `
+    <option value="blank" ${sel('blank')}>Blank / NaN (system missing)</option>
+    <option value="zero" ${sel('zero')}>Replace with 0</option>
+    <option value="mean" ${sel('mean')}>Replace with mean</option>
+    <option value="median" ${sel('median')}>Replace with median</option>
+    <option value="remove" ${sel('remove')}>Remove the record</option>
+    <option value="custom" ${sel('custom')}>Custom value…</option>`;
+  if (type === 'category' || type === 'text') return `
+    <option value="blank" ${sel('blank')}>Blank / system missing</option>
+    <option value="unknown" ${sel('unknown')}>Replace with "Unknown"</option>
+    <option value="zero_str" ${sel('zero_str')}>Replace with "0"</option>
+    <option value="remove" ${sel('remove')}>Remove the record</option>
+    <option value="custom" ${sel('custom')}>Custom value…</option>`;
+  return base;
 }
 
-function buildNumberPanel(col) {
+function attachColCardListeners(col, panel) {
   const sid = safeId(col.name);
-  return `
-    <div class="form-group">
-      <label>Should values have decimal places?</label>
-      <select id="cnum-dec-${sid}">
-        <option value="integer" ${col.decimal_places===null?'selected':''}>No, whole numbers</option>
-        <option value="decimal" ${col.decimal_places!==null?'selected':''}>Yes</option>
-      </select>
-    </div>
-    <div id="cnum-places-panel-${sid}" ${col.decimal_places===null?'style="display:none;"':''}>
-      <div class="form-group">
-        <label>How many decimal places?</label>
-        <input type="number" id="cnum-places-${sid}" min="1" max="10" value="${col.decimal_places||2}">
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Do values contain symbols (£, %, commas)? List them:</label>
-      <input type="text" id="cnum-syms-${sid}" placeholder="e.g. £ % ," value="${(col.numeric_symbols||[]).join(' ')}">
-    </div>
-    <div class="form-group">
-      <label>Valid range (optional — out-of-range values are flagged in report only):</label>
-      <div style="display:flex;gap:1rem;">
-        <input type="number" id="cnum-min-${sid}" placeholder="Min" value="${col.valid_min??''}">
-        <input type="number" id="cnum-max-${sid}" placeholder="Max" value="${col.valid_max??''}">
-      </div>
-    </div>`;
-}
 
-function buildCategoryPanel(col) {
-  const sid = safeId(col.name);
-  const vv = (col.valid_values||[]).join('\n');
-  const cm = col.category_map ? Object.entries(col.category_map).map(([k,v])=>`${k} → ${v}`).join('\n') : '';
-  return `
-    <div class="form-group">
-      <label>What are the valid final values? (one per line)</label>
-      <textarea id="ccat-valid-${sid}" rows="3" placeholder="e.g.\nPass\nFail\nDeferred">${vv}</textarea>
-    </div>
-    <div class="form-group">
-      <label>Map variants to valid values: (format: <em>variant → canonical</em>, one per line)</label>
-      <textarea id="ccat-map-${sid}" rows="4" placeholder="e.g.\npass → Pass\nPASSED → Pass\nFailed → Fail">${cm}</textarea>
-    </div>
-    <div class="form-group">
-      <label>Values not in the list or mapping:</label>
-      <select id="ccat-unmapped-${sid}">
-        <option value="report" ${col.on_unmapped_category==='report'?'selected':''}>Flag in report (recommended)</option>
-        <option value="set_unknown" ${col.on_unmapped_category==='set_unknown'?'selected':''}>Set to "Unknown"</option>
-        <option value="keep" ${col.on_unmapped_category==='keep'?'selected':''}>Keep unchanged</option>
-      </select>
-    </div>`;
-}
-
-function attachColTypePanelListeners(col, panel) {
-  const sid = safeId(col.name);
-  const typeSelect = panel.querySelector(`#ctype-${sid}`);
-  const typeSpecificEl = panel.querySelector(`#type-specific-${sid}`);
-  if (!typeSelect || !typeSpecificEl) return;
-
-  typeSelect.addEventListener('change', () => {
-    col.col_type = typeSelect.value;
-    if (col.col_type === 'id') typeSpecificEl.innerHTML = buildIdPanel(col);
-    else if (col.col_type === 'date') typeSpecificEl.innerHTML = buildDatePanel(col);
-    else if (col.col_type === 'number') typeSpecificEl.innerHTML = buildNumberPanel(col);
-    else if (col.col_type === 'category') typeSpecificEl.innerHTML = buildCategoryPanel(col);
-    else typeSpecificEl.innerHTML = '';
-    attachTypeSpecificListeners(col, typeSpecificEl);
+  // Type selector
+  panel.querySelector(`#ctype-${sid}`)?.addEventListener('change', e => {
+    col.col_type = e.target.value;
+    const reDiv = panel.querySelector(`#crecode-target-${sid}`);
+    const stripDiv = panel.querySelector(`#cstrip-group-${sid}`);
+    if (reDiv) reDiv.style.display = col.col_type === 'recode' ? '' : 'none';
+    if (stripDiv) stripDiv.style.display = ['text','category','recode'].includes(col.col_type) ? '' : 'none';
+    // Rebuild missing action options
+    const missSel = panel.querySelector(`#cmiss-action-${sid}`);
+    if (missSel) missSel.innerHTML = buildMissingActions(col);
   });
 
-  panel.querySelector(`#chas-missing-${sid}`)?.addEventListener('change', e => {
-    if (e.target.checked && !col.missing_sentinels) col.missing_sentinels = ['', 'NA', 'N/A'];
-    else if (!e.target.checked) col.missing_sentinels = null;
+  // Recode target
+  panel.querySelector(`#crecode-into-${sid}`)?.addEventListener('change', e => {
+    col.recode_to_type = e.target.value;
+    const missSel = panel.querySelector(`#cmiss-action-${sid}`);
+    if (missSel) missSel.innerHTML = buildMissingActions(col);
   });
 
-  attachTypeSpecificListeners(col, typeSpecificEl);
+  // Unmapped action
+  panel.querySelector(`#cunmapped-${sid}`)?.addEventListener('change', e => {
+    col.unmapped_action = e.target.value;
+    const customInput = panel.querySelector(`#cunmapped-custom-${sid}`);
+    if (customInput) customInput.style.display = e.target.value === 'other' ? '' : 'none';
+  });
+
+  // Has missing checkbox
+  panel.querySelector(`#chasmissing-${sid}`)?.addEventListener('change', e => {
+    col.has_missing = e.target.checked;
+    const mp = panel.querySelector(`#cmissing-panel-${sid}`);
+    if (mp) mp.style.display = e.target.checked ? '' : 'none';
+  });
+
+  // Missing action
+  panel.querySelector(`#cmiss-action-${sid}`)?.addEventListener('change', e => {
+    col.missing_action = e.target.value;
+    const ci = panel.querySelector(`#cmiss-custom-${sid}`);
+    if (ci) ci.style.display = e.target.value === 'custom' ? '' : 'none';
+  });
 }
 
-function attachTypeSpecificListeners(col, el) {
-  if (!el) return;
-  const sid = safeId(col.name);
-  const uniq = el.querySelector(`#cid-unique-${sid}`);
-  if (uniq) {
-    uniq.addEventListener('change', () => {
-      col.must_be_unique = uniq.value;
-      const p = el.querySelector(`#cid-dup-panel-${sid}`);
-      if (p) p.style.display = uniq.value === 'yes' ? '' : 'none';
-    });
-    const dup = el.querySelector(`#cid-dup-${sid}`);
-    if (dup) {
-      dup.addEventListener('change', () => {
-        col.on_duplicate = dup.value;
-        const kp = el.querySelector(`#cid-keep-panel-${sid}`);
-        if (kp) kp.style.display = dup.value === 'remove' ? '' : 'none';
-      });
-    }
-  }
-  const decSel = el.querySelector(`#cnum-dec-${sid}`);
-  if (decSel) {
-    decSel.addEventListener('change', () => {
-      const pp = el.querySelector(`#cnum-places-panel-${sid}`);
-      if (pp) pp.style.display = decSel.value === 'decimal' ? '' : 'none';
-      if (decSel.value === 'integer') col.decimal_places = null;
-    });
-  }
-}
-
-function collectColCPanel(col, panel) {
+function collectColPanel(col, panel) {
   if (!panel) return;
   const sid = safeId(col.name);
-  const typeEl = panel.querySelector(`#ctype-${sid}`);
-  if (typeEl) col.col_type = typeEl.value;
-
-  const hasMissing = panel.querySelector(`#chas-missing-${sid}`);
-  if (hasMissing && !hasMissing.checked) col.missing_sentinels = null;
-
-  const ts = panel.querySelector(`#type-specific-${sid}`);
-  if (!ts) return;
-
-  if (col.col_type === 'id') {
-    col.must_be_unique = ts.querySelector(`#cid-unique-${sid}`)?.value || null;
-    col.on_duplicate = ts.querySelector(`#cid-dup-${sid}`)?.value || null;
-    col.keep_duplicate = ts.querySelector(`#cid-keep-${sid}`)?.value || null;
-    col.id_case = ts.querySelector(`#cid-case-${sid}`)?.value || null;
-  } else if (col.col_type === 'date') {
-    col.date_format_in = ts.querySelector(`#cdate-in-${sid}`)?.value || null;
-    col.date_format_out = ts.querySelector(`#cdate-out-${sid}`)?.value || 'YYYY-MM-DD';
-  } else if (col.col_type === 'number') {
-    const decSel = ts.querySelector(`#cnum-dec-${sid}`);
-    col.decimal_places = decSel?.value === 'decimal'
-      ? parseInt(ts.querySelector(`#cnum-places-${sid}`)?.value || '2') : null;
-    const syms = ts.querySelector(`#cnum-syms-${sid}`)?.value.trim();
-    col.numeric_symbols = syms ? syms.split(/\s+/) : null;
-    const mn = ts.querySelector(`#cnum-min-${sid}`)?.value;
-    const mx = ts.querySelector(`#cnum-max-${sid}`)?.value;
-    col.valid_min = mn !== '' && mn != null ? parseFloat(mn) : null;
-    col.valid_max = mx !== '' && mx != null ? parseFloat(mx) : null;
-  } else if (col.col_type === 'category') {
-    const vvRaw = ts.querySelector(`#ccat-valid-${sid}`)?.value.trim();
-    col.valid_values = vvRaw ? vvRaw.split('\n').map(s => s.trim()).filter(Boolean) : null;
-    const cmRaw = ts.querySelector(`#ccat-map-${sid}`)?.value.trim();
-    if (cmRaw) {
-      col.category_map = {};
-      cmRaw.split('\n').forEach(line => {
-        const parts = line.split('→');
-        if (parts.length === 2) col.category_map[parts[0].trim()] = parts[1].trim();
-      });
-    }
-    col.on_unmapped_category = ts.querySelector(`#ccat-unmapped-${sid}`)?.value || 'report';
-  }
+  col.col_type        = panel.querySelector(`#ctype-${sid}`)?.value || col.col_type;
+  col.recode_to_type  = col.col_type === 'recode' ? (panel.querySelector(`#crecode-into-${sid}`)?.value || null) : null;
+  col.rename_to       = panel.querySelector(`#crename-${sid}`)?.value.trim() || null;
+  col.value_mapping   = panel.querySelector(`#cmap-${sid}`)?.value.trim() || '';
+  col.unmapped_action = panel.querySelector(`#cunmapped-${sid}`)?.value || 'system_missing';
+  col.unmapped_custom = panel.querySelector(`#cunmapped-custom-${sid}`)?.value.trim() || '';
+  col.has_missing     = panel.querySelector(`#chasmissing-${sid}`)?.checked || false;
+  col.missing_sentinels = panel.querySelector(`#cmiss-sent-${sid}`)?.value.trim() || '';
+  col.missing_action  = panel.querySelector(`#cmiss-action-${sid}`)?.value || 'blank';
+  col.missing_custom  = panel.querySelector(`#cmiss-custom-${sid}`)?.value.trim() || '';
+  col.strip_chars     = panel.querySelector(`#cstrip-${sid}`)?.value.trim() || '';
 }
 
 function advanceColumnC() {
   const cols = selectedCols();
-  const col = cols[state.currentColIndex];
-  collectColCPanel(col, document.getElementById('section-c-column-panel'));
+  collectColPanel(cols[state.currentColIndex], document.getElementById('section-c-column-panel'));
   state.currentColIndex++;
-  if (state.currentColIndex >= cols.length) {
-    state.allColsDone = true;
-    checkDateOrderVisibility();
-  }
+  if (state.currentColIndex >= cols.length) { state.allColsDone = true; checkDateOrder(); }
   renderSectionC();
 }
 
-function checkDateOrderVisibility() {
-  const dateColsExist = selectedCols().some(c => c.col_type === 'date');
-  const section = document.getElementById('qc5-date-order-section');
-  if (section) section.style.display = (state.allColsDone && dateColsExist) ? '' : 'none';
+function checkDateOrder() {
+  const hasDates = selectedCols().some(c => c.col_type === 'date');
+  const s = document.getElementById('qc5-date-order-section');
+  if (s) s.style.display = (state.allColsDone && hasDates) ? '' : 'none';
 }
 
-// ── Date order rules ──────────────────────────────────────────────────────────
-
+// ── Date ordering rules ────────────────────────────────────────────────────────
 function initDateOrderUI() {
   document.getElementById('qc5-add-rule')?.addEventListener('click', () => {
     const dateCols = selectedCols().filter(c => c.col_type === 'date').map(c => c.name);
     const opts = dateCols.map(n => `<option>${n}</option>`).join('');
-    const rule = { earlier_col: dateCols[0] || '', later_col: dateCols[1] || dateCols[0] || '', on_violation: 'report' };
+    const rule = { earlier_col: dateCols[0]||'', later_col: dateCols[1]||dateCols[0]||'', on_violation: 'report' };
     state.contract.date_order_rules.push(rule);
-    const list = document.getElementById('qc5-rules-list');
     const idx = state.contract.date_order_rules.length - 1;
     const div = document.createElement('div');
     div.style.cssText = 'display:flex;gap:0.75rem;align-items:center;margin-bottom:0.5rem;';
-    div.innerHTML = `
-      <select class="dor-earlier" data-idx="${idx}">${opts}</select>
-      <span>must come before</span>
-      <select class="dor-later" data-idx="${idx}">${opts}</select>
-      <select class="dor-action" data-idx="${idx}">
-        <option value="report">Report only</option>
-        <option value="blank_later">Blank the later date</option>
-      </select>
+    div.innerHTML = `<select class="dor-earlier" data-idx="${idx}">${opts}</select>
+      <span>before</span><select class="dor-later" data-idx="${idx}">${opts}</select>
+      <select class="dor-action" data-idx="${idx}"><option value="report">Report only</option><option value="blank_later">Blank later date</option></select>
       <button type="button" class="btn-ghost btn-small dor-remove" data-idx="${idx}">✕</button>`;
-    list?.appendChild(div);
+    document.getElementById('qc5-rules-list')?.appendChild(div);
     div.querySelector('.dor-earlier')?.addEventListener('change', e => { state.contract.date_order_rules[idx].earlier_col = e.target.value; });
     div.querySelector('.dor-later')?.addEventListener('change', e => { state.contract.date_order_rules[idx].later_col = e.target.value; });
     div.querySelector('.dor-action')?.addEventListener('change', e => { state.contract.date_order_rules[idx].on_violation = e.target.value; });
-    div.querySelector('.dor-remove')?.addEventListener('click', () => {
-      state.contract.date_order_rules.splice(idx, 1);
-      div.remove();
-    });
+    div.querySelector('.dor-remove')?.addEventListener('click', () => { state.contract.date_order_rules.splice(idx,1); div.remove(); });
   });
 }
 
-// ── Section D: missing values ─────────────────────────────────────────────────
-
-function renderSectionD() {
-  const cols = selectedCols().filter(c => c.missing_sentinels !== null);
-  const panels = document.getElementById('section-d-panels');
-  const empty = document.getElementById('section-d-empty');
-  if (!cols.length) {
-    if (panels) panels.innerHTML = '';
-    if (empty) empty.style.display = '';
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-  if (!panels) return;
-  panels.innerHTML = cols.map(col => `
-    <div style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;">
-      <h3 style="margin:0 0 0.75rem;font-size:1rem;">"${col.name}"</h3>
-      <div class="form-group">
-        <label>What represents "missing" in this column? (comma-separated)</label>
-        <input type="text" id="dmiss-sent-${safeId(col.name)}" value="${(col.missing_sentinels||[]).join(', ')}" placeholder="blank, NA, N/A, 99">
-      </div>
-      <div class="form-group">
-        <label>What should the script do with missing values?</label>
-        <select id="dmiss-action-${safeId(col.name)}">
-          <option value="standardise" ${col.missing_action==='standardise'?'selected':''}>Standardise to empty and report count</option>
-          <option value="replace:Unknown" ${col.missing_action?.startsWith('replace:')?'selected':''}>Replace with a label</option>
-          <option value="remove_record" ${col.missing_action==='remove_record'?'selected':''}>Remove the whole record</option>
-          <option value="report_only" ${col.missing_action==='report_only'?'selected':''}>Report count only</option>
-        </select>
-      </div>
-      <div id="dmiss-label-${safeId(col.name)}" style="${col.missing_action?.startsWith('replace:') ? '' : 'display:none;'}">
-        <div class="form-group">
-          <label>Replacement label:</label>
-          <input type="text" id="dmiss-label-val-${safeId(col.name)}" value="${col.missing_action?.startsWith('replace:') ? col.missing_action.split(':')[1] : 'Unknown'}">
-        </div>
-      </div>
-    </div>`).join('');
-
-  cols.forEach(col => {
-    const sid = safeId(col.name);
-    document.getElementById(`dmiss-action-${sid}`)?.addEventListener('change', e => {
-      const labelDiv = document.getElementById(`dmiss-label-${sid}`);
-      if (labelDiv) labelDiv.style.display = e.target.value === 'replace:Unknown' ? '' : 'none';
-    });
-  });
-}
-
-function collectD() {
-  selectedCols().filter(c => c.missing_sentinels !== null).forEach(col => {
-    const sid = safeId(col.name);
-    const sent = document.getElementById(`dmiss-sent-${sid}`)?.value;
-    col.missing_sentinels = sent ? sent.split(',').map(s => s.trim()).filter(Boolean) : null;
-    const action = document.getElementById(`dmiss-action-${sid}`)?.value;
-    if (action === 'replace:Unknown') {
-      const label = document.getElementById(`dmiss-label-val-${sid}`)?.value || 'Unknown';
-      col.missing_action = `replace:${label}`;
-    } else {
-      col.missing_action = action || 'standardise';
-    }
-  });
-}
-
-// ── Section E: rename ─────────────────────────────────────────────────────────
-
-function renderSectionE() {
-  const panels = document.getElementById('section-e-panels');
-  if (!panels) return;
-  panels.innerHTML = selectedCols().map(col => `
-    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem;">
-      <span style="min-width:200px;font-weight:500;">"${col.name}"</span>
-      <span style="color:var(--text-muted);">→</span>
-      <input type="text" id="erename-${safeId(col.name)}" placeholder="Leave blank to keep original name" value="${col.rename_to||''}" style="flex:1;">
-    </div>`).join('');
-}
-
-function collectE() {
-  selectedCols().forEach(col => {
-    const v = document.getElementById(`erename-${safeId(col.name)}`)?.value.trim();
-    col.rename_to = v || null;
-  });
-}
-
-// ── Section F: cleaning actions ───────────────────────────────────────────────
-
-function renderSectionF() {
-  const panels = document.getElementById('section-f-panels');
-  if (!panels) return;
-  panels.innerHTML = selectedCols().map(col => `
-    <div style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;">
-      <h3 style="margin:0 0 0.75rem;font-size:1rem;">"${col.name}" [${col.col_type}]</h3>
-      <div class="form-group">
-        <label>Capitalisation:</label>
-        <select id="fcap-${safeId(col.name)}">
-          <option value="" ${!col.capitalisation?'selected':''}>No change</option>
-          <option value="upper" ${col.capitalisation==='upper'?'selected':''}>UPPERCASE</option>
-          <option value="lower" ${col.capitalisation==='lower'?'selected':''}>lowercase</option>
-          <option value="title" ${col.capitalisation==='title'?'selected':''}>Title Case</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Remove characters or patterns:</label>
-        <input type="text" id="fremove-${safeId(col.name)}" placeholder="e.g. # * ?" value="${col.remove_chars||''}">
-      </div>
-      ${col.col_type === 'text' ? `
-      <div class="form-group">
-        <label><input type="checkbox" id="fcollapse-${safeId(col.name)}" ${col.collapse_spaces?'checked':''}> Collapse repeated internal spaces</label>
-      </div>` : ''}
-    </div>`).join('');
-}
-
-function collectF() {
-  selectedCols().forEach(col => {
-    const sid = safeId(col.name);
-    const cap = document.getElementById(`fcap-${sid}`)?.value;
-    col.capitalisation = cap || null;
-    const rm = document.getElementById(`fremove-${sid}`)?.value.trim();
-    col.remove_chars = rm || null;
-    const collapse = document.getElementById(`fcollapse-${sid}`);
-    col.collapse_spaces = collapse ? collapse.checked : null;
-  });
-}
-
-// ── Section G: recode ─────────────────────────────────────────────────────────
-
-function renderSectionG() {
-  const checkboxes = document.getElementById('qg-column-checkboxes');
-  if (!checkboxes) return;
-  checkboxes.innerHTML = selectedCols().map(col => `
-    <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;background:var(--bg-body);border:1px solid var(--grey-200);border-radius:999px;padding:0.25rem 0.75rem;font-size:0.85rem;">
-      <input type="checkbox" class="qg-col-cb" data-col="${col.name}" ${col.recode_map?.length ? 'checked' : ''}> ${col.name}
-    </label>`).join('');
-
-  function updateGPanels() {
-    const selected = [...document.querySelectorAll('.qg-col-cb:checked')].map(cb => cb.dataset.col);
-    const gPanels = document.getElementById('section-g-panels');
-    if (!gPanels) return;
-    gPanels.innerHTML = selected.map(name => {
-      const col = state.contract.columns.find(c => c.name === name);
-      if (!col.recode_map) col.recode_map = [];
-      const rows = col.recode_map.map((r, i) => `
-        <tr>
-          <td><input type="text" class="recode-old" data-col="${name}" data-idx="${i}" value="${r.old_values.join(', ')}" placeholder="Old value(s), comma-separated"></td>
-          <td><input type="text" class="recode-new" data-col="${name}" data-idx="${i}" value="${r.new_value}" placeholder="New value"></td>
-          <td><input type="text" class="recode-cond" data-col="${name}" data-idx="${i}" value="${r.condition||''}" placeholder="Optional condition"></td>
-          <td><button type="button" class="btn-ghost btn-small recode-del" data-col="${name}" data-idx="${i}">✕</button></td>
-        </tr>`).join('');
-      return `
-        <div style="border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;">
-          <h3 style="margin:0 0 0.75rem;font-size:1rem;">"${name}"</h3>
-          <table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:0.5rem;">
-            <thead><tr><th>Old value(s)</th><th>New value</th><th>Condition (optional)</th><th></th></tr></thead>
-            <tbody id="recode-tbody-${safeId(name)}">${rows}</tbody>
-          </table>
-          <button type="button" class="btn-ghost btn-small" id="recode-add-${safeId(name)}">+ Add row</button>
-          <div class="form-group" style="margin-top:1rem;">
-            <label>Values not covered by the mapping:</label>
-            <select id="recode-catch-${safeId(name)}">
-              <option value="keep" ${(col.recode_catchall||'keep')==='keep'?'selected':''}>Keep unchanged</option>
-              <option value="set_unknown" ${col.recode_catchall==='set_unknown'?'selected':''}>Set to "Unknown"</option>
-              <option value="report" ${col.recode_catchall==='report'?'selected':''}>Flag in report</option>
-            </select>
-          </div>
-        </div>`;
-    }).join('');
-
-    selected.forEach(name => {
-      const col = state.contract.columns.find(c => c.name === name);
-      document.getElementById(`recode-add-${safeId(name)}`)?.addEventListener('click', () => {
-        col.recode_map.push({ old_values: [], new_value: '', condition: null });
-        updateGPanels();
-      });
-    });
-
-    document.querySelectorAll('.recode-del').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const col = state.contract.columns.find(c => c.name === btn.dataset.col);
-        col.recode_map.splice(parseInt(btn.dataset.idx), 1);
-        updateGPanels();
-      });
-    });
-  }
-
-  checkboxes.querySelectorAll('.qg-col-cb').forEach(cb => cb.addEventListener('change', updateGPanels));
-  updateGPanels();
-}
-
-function collectG() {
-  selectedCols().forEach(col => {
-    const tbody = document.getElementById(`recode-tbody-${safeId(col.name)}`);
-    if (!tbody) { col.recode_map = null; return; }
-    const rows = [...tbody.querySelectorAll('tr')];
-    col.recode_map = rows.map((_, i) => ({
-      old_values: (tbody.querySelector(`.recode-old[data-idx="${i}"]`)?.value || '').split(',').map(s => s.trim()).filter(Boolean),
-      new_value: tbody.querySelector(`.recode-new[data-idx="${i}"]`)?.value?.trim() || '',
-      condition: tbody.querySelector(`.recode-cond[data-idx="${i}"]`)?.value?.trim() || null
-    })).filter(r => r.old_values.length || r.new_value);
-    if (!col.recode_map.length) col.recode_map = null;
-    col.recode_catchall = document.getElementById(`recode-catch-${safeId(col.name)}`)?.value || 'keep';
-  });
-}
-
-// ── Section H ─────────────────────────────────────────────────────────────────
-
+// ── Section H ──────────────────────────────────────────────────────────────────
 function collectH() {
-  state.contract.output_name = document.getElementById('qh-name')?.value.trim() || 'cleaned';
+  state.contract.output_name   = document.getElementById('qh-name')?.value.trim() || 'cleaned';
   state.contract.output_format = document.getElementById('qh-format')?.value || 'same';
 }
 
-// ── Generic collect dispatcher ────────────────────────────────────────────────
-
+// ── Collect dispatcher ─────────────────────────────────────────────────────────
 function collectCurrentSection() {
   switch (state.currentSection) {
     case 'A': collectA(); break;
     case 'C': {
       const cols = selectedCols();
-      if (cols.length && state.currentColIndex < cols.length) {
-        collectColCPanel(cols[state.currentColIndex], document.getElementById('section-c-column-panel'));
-      }
+      if (cols.length && state.currentColIndex < cols.length)
+        collectColPanel(cols[state.currentColIndex], document.getElementById('section-c-column-panel'));
       break;
     }
-    case 'D': collectD(); break;
-    case 'E': collectE(); break;
-    case 'F': collectF(); break;
-    case 'G': collectG(); break;
     case 'H': collectH(); break;
   }
 }
 
-// ── Review screen ─────────────────────────────────────────────────────────────
-
+// ── Review screen ──────────────────────────────────────────────────────────────
 function buildReview() {
   const c = state.contract;
-  let html = `
-    <div style="background:var(--bg-body);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1rem;">
-      <h3 style="margin:0 0 0.5rem;">File: ${c.file_name || '(not set)'}</h3>
-      <p style="margin:0;font-size:0.88rem;color:var(--text-muted);">Format: ${c.file_format} · Rows: ${c.row_count_estimate} · Encoding: ${c.encoding}</p>
-    </div>`;
-  html += `<h3 style="font-size:1rem;margin-bottom:0.5rem;">Columns (${selectedCols().length} selected)</h3>`;
-  selectedCols().forEach(col => {
-    html += `<div style="background:var(--white);border:1px solid var(--grey-200);border-radius:var(--radius-md);padding:1rem;margin-bottom:0.6rem;">
-      <strong>"${col.name}"</strong> [${col.col_type}]`;
-    if (col.rename_to) html += ` → renamed to <em>"${col.rename_to}"</em>`;
-    html += '<br><span style="font-size:0.85rem;color:var(--text-muted);">';
-    if (col.must_be_unique === 'yes') html += `Must be unique; duplicates: ${col.on_duplicate}. `;
-    if (col.id_case && col.id_case !== 'none') html += `Case: ${col.id_case}. `;
-    if (col.date_format_in) html += `Date in: ${col.date_format_in} → out: ${col.date_format_out}. `;
-    if (col.valid_values?.length) html += `Valid values: ${col.valid_values.join(', ')}. `;
-    if (col.missing_sentinels?.length) html += `Missing (${col.missing_sentinels.join(', ')}) → ${col.missing_action}. `;
-    if (col.recode_map?.length) html += `${col.recode_map.length} recode rule(s). `;
-    html += '</span></div>';
+  const jumpLink = (sec, label) =>
+    `<a href="#" class="review-jump" data-sec="${sec}" style="font-size:0.82rem;color:var(--sage-dark);text-decoration:underline;margin-right:1rem;">${label}</a>`;
+
+  let html = `<div style="margin-bottom:1rem;">${jumpLink('A','A — File')}${jumpLink('B','B — Columns')}${jumpLink('C','C — Column rules')}${jumpLink('H','H — Output')}</div>`;
+
+  html += `<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+    <thead><tr style="border-bottom:2px solid var(--grey-200);">
+      <th style="padding:0.5rem 0.75rem 0.5rem 0;text-align:left;">Column</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Renamed to</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Type</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Recode → new col</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Mapping (first 2 lines)</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Unmapped</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Missing</th>
+      <th style="padding:0.5rem 0.75rem;text-align:left;">Strip</th>
+    </tr></thead><tbody>`;
+
+  selectedCols().forEach((col, i) => {
+    const bg = i % 2 === 0 ? '' : 'background:rgba(52,84,99,0.03);';
+    const mapPreview = (col.value_mapping||'').split('\n').slice(0,2).join('; ') || '—';
+    const missInfo = col.has_missing ? `${col.missing_sentinels||'blank,NA'} → ${col.missing_action}${col.missing_custom?' ('+col.missing_custom+')':''}` : '—';
+    html += `<tr style="${bg}">
+      <td style="padding:0.5rem 0.75rem 0.5rem 0;font-weight:600;">${col.name}</td>
+      <td style="padding:0.5rem 0.75rem;">${col.rename_to||'—'}</td>
+      <td style="padding:0.5rem 0.75rem;">${col.col_type}</td>
+      <td style="padding:0.5rem 0.75rem;">${col.recode_to_type ? col.recode_to_type+' (-New)' : '—'}</td>
+      <td style="padding:0.5rem 0.75rem;font-size:0.8rem;color:var(--text-muted);">${mapPreview}</td>
+      <td style="padding:0.5rem 0.75rem;">${col.unmapped_action==='other' ? col.unmapped_custom||'other' : col.unmapped_action}</td>
+      <td style="padding:0.5rem 0.75rem;font-size:0.8rem;">${missInfo}</td>
+      <td style="padding:0.5rem 0.75rem;">${col.strip_chars||'—'}</td>
+    </tr>`;
   });
+
+  html += '</tbody></table>';
+
   if (c.date_order_rules.length) {
-    html += `<h3 style="font-size:1rem;margin-top:1rem;margin-bottom:0.5rem;">Date ordering rules</h3>`;
-    c.date_order_rules.forEach(r => {
-      html += `<p style="font-size:0.88rem;">"${r.earlier_col}" before "${r.later_col}" — violation: ${r.on_violation}</p>`;
-    });
+    html += `<h3 style="font-size:0.95rem;margin-top:1.5rem;">Date ordering rules</h3>`;
+    c.date_order_rules.forEach(r => { html += `<p style="font-size:0.85rem;">"${r.earlier_col}" before "${r.later_col}" — ${r.on_violation}</p>`; });
   }
-  html += `<h3 style="font-size:1rem;margin-top:1rem;margin-bottom:0.5rem;">Output</h3>
-    <p style="font-size:0.88rem;">${c.output_name} (${c.output_format})</p>`;
-  const reviewContent = document.getElementById('review-content');
-  if (reviewContent) reviewContent.innerHTML = html;
+
+  html += `<h3 style="font-size:0.95rem;margin-top:1.5rem;">Output</h3>
+    <p style="font-size:0.85rem;">${c.output_name} (${c.output_format})</p>`;
+
+  const rc = document.getElementById('review-content');
+  if (rc) rc.innerHTML = html;
+
+  // Wire jump links
+  document.querySelectorAll('.review-jump').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const sec = a.dataset.sec;
+      state.currentSection = sec;
+      if (sec === 'C') { state.currentColIndex = 0; state.allColsDone = false; }
+      showSection(sec);
+    });
+  });
 }
 
-// ── Submit ────────────────────────────────────────────────────────────────────
-
+// ── Submit ─────────────────────────────────────────────────────────────────────
 async function submitInterview() {
   const btn = document.getElementById('wizard-btn-submit');
   const saving = document.getElementById('review-saving');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
   if (saving) saving.style.display = '';
-
   collectH();
-  await saveToFirestore();
 
   try {
     const resp = await fetch(`${BACKEND_URL}/api/generate-script`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(state.contract)
     });
     if (!resp.ok) throw new Error(`Server error ${resp.status}`);
-    const scriptContent = await resp.text();
+    const cleanScript = await resp.text();
+    const reportScript = generateReportingScript(state.contract);
+    const outName = (state.contract.output_name || 'cleaned').replace(/[^a-z0-9_]/gi, '_');
 
-    const blob = new Blob([scriptContent], { type: 'text/x-python' });
+    // Save to Firestore
+    await saveScriptToFirestore(cleanScript, reportScript);
+    await saveToFirestore();
+
+    // Zip and download
+    const zip = new JSZip();
+    zip.file(`${outName}_clean.py`, cleanScript);
+    zip.file(`${outName}_report.py`, reportScript);
+    const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    const safeName = (state.contract.output_name || 'cleaned').replace(/[^a-z0-9_]/gi, '_');
-    a.download = `${safeName}.py`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    a.href = url; a.download = `${outName}.zip`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
 
     await clearFirestoreDraft();
 
+    // Navigate to My Scripts
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-scripts')?.classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelector('.nav-item[data-view="scripts"]')?.classList.add('active');
 
   } catch (err) {
-    alert('Failed to generate script: ' + err.message);
-    console.error(err);
+    alert('Failed to generate script: ' + err.message); console.error(err);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Approve & Generate'; }
     if (saving) saving.style.display = 'none';
   }
 }
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
-
+// ── Boot ───────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   auth.onAuthStateChanged(async user => {
-    if (user) {
-      const restored = await loadFromFirestore();
-      if (restored) showSection(state.currentSection);
-    }
+    if (user) { const ok = await loadFromFirestore(); if (ok) showSection(state.currentSection); }
   });
 
   document.getElementById('proc-audit')?.addEventListener('click', () => {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-questionnaire')?.classList.add('active');
-    state.currentSection = 'A';
+    state.currentSection = 'A'; state.currentColIndex = 0; state.allColsDone = false;
     showSection('A');
   });
 
   document.getElementById('btn-continue')?.addEventListener('click', () => {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-questionnaire')?.classList.add('active');
-    state.currentSection = 'A';
+    state.currentSection = 'A'; state.currentColIndex = 0; state.allColsDone = false;
     showSection('A');
   });
 
   document.getElementById('wizard-btn-next')?.addEventListener('click', nextSection);
   document.getElementById('wizard-btn-back')?.addEventListener('click', prevSection);
+  document.getElementById('wizard-btn-prev-col')?.addEventListener('click', prevColumn);
   document.getElementById('wizard-btn-submit')?.addEventListener('click', submitInterview);
 
   document.getElementById('qa-format')?.addEventListener('change', e => {
-    const sheetGroup = document.getElementById('qa-sheet-group');
-    if (sheetGroup) sheetGroup.style.display = ['xlsx', 'xls'].includes(e.target.value) ? '' : 'none';
+    const sg = document.getElementById('qa-sheet-group');
+    if (sg) sg.style.display = ['xlsx','xls'].includes(e.target.value) ? '' : 'none';
   });
 
   initSectionB();

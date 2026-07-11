@@ -75,14 +75,14 @@
 <aside id="app-sidebar" class="app-sidebar" role="navigation" aria-label="App navigation">
 
   <!-- Logo -->
-  <div class="sidebar-logo">
+  <a href="https://www.datasouschef.com" class="sidebar-logo" style="text-decoration:none;color:inherit;" title="Back to DataSousChef home">
     <svg width="32" height="32" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M8 8 h18 a18 18 0 0 1 0 44 h-18 z" fill="#345463"/>
       <path d="M34 16 C44 16, 50 22, 44 30 C38 38, 50 38, 50 44"
             stroke="#AFBF73" stroke-width="4.5" stroke-linecap="round" fill="none"/>
     </svg>
     DataSousChef
-  </div>
+  </a>
 
   <!-- Nav links -->
   <nav class="sidebar-nav" aria-label="Primary navigation">
@@ -114,7 +114,7 @@
       Help &amp; Guidance
     </button>
 
-    <a class="nav-item" href="index.html" target="_blank" rel="noopener">
+    <a class="nav-item" href="https://www.datasouschef.com">
       <span class="nav-icon" aria-hidden="true">🏠</span>
       Back to home page
     </a>
@@ -443,11 +443,7 @@
       <div class="wizard-progress" id="interview-progress" role="navigation" aria-label="Interview sections">
         <div class="wizard-step active" data-section="A">A — File</div>
         <div class="wizard-step" data-section="B">B — Columns</div>
-        <div class="wizard-step" data-section="C">C — Types</div>
-        <div class="wizard-step" data-section="D">D — Missing</div>
-        <div class="wizard-step" data-section="E">E — Rename</div>
-        <div class="wizard-step" data-section="F">F — Clean</div>
-        <div class="wizard-step" data-section="G">G — Recode</div>
+        <div class="wizard-step" data-section="C">C — Column rules</div>
         <div class="wizard-step" data-section="H">H — Output</div>
         <div class="wizard-step" data-section="review">Review</div>
       </div>
@@ -535,7 +531,8 @@
           <div id="qb-selection-area" style="display:none;">
             <div class="form-group">
               <label>Which columns do you want to apply rules to?</label>
-              <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Unselected columns will be carried through unchanged.</p>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.4rem;">Unselected columns will be carried through unchanged.</p>
+              <p style="font-size:0.85rem;color:var(--sage-dark);margin-bottom:0.75rem;">💡 Include any column whose name you want to change, or which contains missing or irregular values.</p>
               <div id="qb-column-checkboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
               <div style="display:flex;gap:0.75rem;margin-top:0.75rem;">
                 <button type="button" class="btn-ghost btn-small" id="qb-select-all">Select all</button>
@@ -545,11 +542,11 @@
           </div>
         </div>
 
-        <!-- ── Section C: Column types (rendered dynamically per column) ── -->
+        <!-- ── Section C: Per-column rules (type, mapping, missing, rename) ── -->
         <div class="wizard-page" id="interview-section-C">
-          <h2>C — What kind of data is in each column?</h2>
+          <h2>C — Column rules</h2>
           <div id="section-c-progress" style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;"></div>
-          <p class="wizard-page-desc">We'll go through each column one at a time. Answer all the questions for this column before moving on.</p>
+          <p class="wizard-page-desc">We'll go through each selected column one at a time.</p>
           <div id="section-c-column-panel"></div>
 
           <!-- Date ordering rule (shown after all columns typed) -->
@@ -561,41 +558,7 @@
           </div>
         </div>
 
-        <!-- ── Section D: Missing values ─────────────────────────────── -->
-        <div class="wizard-page" id="interview-section-D">
-          <h2>D — Missing values</h2>
-          <p class="wizard-page-desc">For each column with missing values, say what represents "missing" and what to do with those records.</p>
-          <div id="section-d-panels"></div>
-          <p id="section-d-empty" style="color:var(--text-muted);font-style:italic;display:none;">No columns flagged as having missing values. You can go back to Section C to flag them, or continue.</p>
-        </div>
 
-        <!-- ── Section E: Rename columns ─────────────────────────────── -->
-        <div class="wizard-page" id="interview-section-E">
-          <h2>E — Renaming columns</h2>
-          <p class="wizard-page-desc">Do you want to rename any columns in the cleaned output? Leave blank to keep the original name.</p>
-          <div id="section-e-panels"></div>
-        </div>
-
-        <!-- ── Section F: Cleaning actions ───────────────────────────── -->
-        <div class="wizard-page" id="interview-section-F">
-          <h2>F — Cleaning actions</h2>
-          <p class="wizard-page-desc">For each selected column, choose any additional cleaning actions to apply.</p>
-          <div id="section-f-panels"></div>
-        </div>
-
-        <!-- ── Section G: Recode and regroup ─────────────────────────── -->
-        <div class="wizard-page" id="interview-section-G">
-          <h2>G — Recoding and regrouping</h2>
-          <p class="wizard-page-desc">Map old values to new ones, or band numeric values into groups.</p>
-
-          <div class="form-group" style="margin-bottom:1.5rem;">
-            <label>Which columns do you want to recode or regroup?</label>
-            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Select any that apply. Leave all unchecked to skip this section.</p>
-            <div id="qg-column-checkboxes" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
-          </div>
-
-          <div id="section-g-panels"></div>
-        </div>
 
         <!-- ── Section H: Output ─────────────────────────────────────── -->
         <div class="wizard-page" id="interview-section-H">
@@ -618,7 +581,12 @@
           </div>
 
           <div style="background:rgba(52,84,99,0.06);padding:1rem 1.25rem;border-radius:var(--radius-md);margin-top:1rem;font-size:0.88rem;color:var(--navy-dark);">
-            <strong>📋 Every script includes a summary report</strong> — rows read and written; per column: values changed, missing values handled, duplicates found, unparseable dates, out-of-range numbers, unexpected categories. No raw data values are printed.
+            <strong>📦 You'll download a .zip with two Python files:</strong>
+            <ul style="margin:0.5rem 0 0 1.2rem;">
+              <li><strong>_clean.py</strong> — cleans your dataset</li>
+              <li><strong>_report.py</strong> — produces quality statistics per column after cleaning</li>
+            </ul>
+            <p style="margin:0.5rem 0 0;">⚠️ <em>Run _report.py after cleaning to verify the cleaned dataset aligns with your original specifications.</em></p>
           </div>
         </div>
 
@@ -637,6 +605,7 @@
         <button class="btn btn-ghost" id="wizard-btn-back" style="visibility:hidden;">← Back</button>
         <span id="interview-autosave-indicator" style="font-size:0.8rem;color:var(--text-muted);"></span>
         <div style="display:flex;gap:0.75rem;">
+          <button class="btn btn-ghost" id="wizard-btn-prev-col" style="display:none;">← Previous column</button>
           <button class="btn btn-primary" id="wizard-btn-next">Next →</button>
           <button class="btn btn-primary" id="wizard-btn-submit" style="display:none;background:var(--sage);color:var(--navy-dark);">Approve &amp; Generate</button>
         </div>
@@ -654,38 +623,19 @@
         <p class="welcome-sub">Scripts generated in your past sessions. Download and run them locally at any time.</p>
       </div>
 
-      <!-- Example scripts (placeholder data) -->
-      <div style="display:flex;flex-direction:column;gap:0.75rem;" role="list" aria-label="Generated scripts">
+      <!-- Dynamic scripts list (populated by app.js from Firestore) -->
+      <div id="scripts-list" style="display:flex;flex-direction:column;gap:0.75rem;" role="list" aria-label="Generated scripts"></div>
 
-        <div class="script-card" role="listitem" tabindex="0" aria-label="Student enrolment 2024, generated 18 June, download available">
-          <div class="script-card-icon" aria-hidden="true">🐍</div>
-          <div class="script-card-info">
-            <p class="script-card-name">clean_student_enrolment_2024.py</p>
-            <p class="script-card-meta">Diagnose &amp; Standardise · Generated 18 Jun 2026</p>
-          </div>
-          <span class="script-card-status status-success" aria-label="Status: completed">Completed</span>
-          <button class="script-card-download" aria-label="Download clean_student_enrolment_2024.py">⬇ Download</button>
-        </div>
-
-        <div class="script-card" role="listitem" tabindex="0" aria-label="Module outcomes link, generated 15 June, pending">
-          <div class="script-card-icon" aria-hidden="true">🐍</div>
-          <div class="script-card-info">
-            <p class="script-card-name">link_module_outcomes.py</p>
-            <p class="script-card-meta">Link Datasets · Generated 15 Jun 2026</p>
-          </div>
-          <span class="script-card-status status-pending" aria-label="Status: in progress">In progress</span>
-          <button class="script-card-download" aria-label="Download link_module_outcomes.py">⬇ Download</button>
-        </div>
-
-      </div>
-
-      <!-- Empty state (shown when no scripts — hidden by default here) -->
+      <!-- Empty state -->
       <div class="scripts-empty" id="scripts-empty" style="display:none;" aria-live="polite">
         <div class="scripts-empty-icon" aria-hidden="true">📭</div>
         <h3>No scripts yet</h3>
         <p>Your generated Python scripts will appear here after your first task.</p>
         <button class="btn btn-primary" id="new-task-shortcut">Start your first task →</button>
       </div>
+
+      <!-- Loading state -->
+      <div id="scripts-loading" style="color:var(--text-muted);font-size:0.9rem;">Loading your scripts…</div>
 
     </section>
 
@@ -767,9 +717,11 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="js/app.js"></script>
 <script type="module" src="js/interview.js"></script>
+<script type="module" src="js/scripts.js"></script>
 <script type="module" src="js/firebase-config.js"></script>
 <script type="module" src="js/auth.js"></script>
 <!-- Show mobile menu button via JS media query -->
