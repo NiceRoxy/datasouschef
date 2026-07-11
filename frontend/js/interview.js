@@ -4,8 +4,18 @@
  * Saves state to Firebase Firestore after each section.
  */
 
-import { db, auth } from './firebase-config.js';
-import { doc, setDoc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { auth } from './firebase-config.js';
+
+// Lazy Firestore loader — never blocks module init
+let _db = null;
+async function getDb() {
+  if (_db) return _db;
+  try {
+    const cfg = await import('./firebase-config.js');
+    _db = cfg.db || null;
+  } catch (e) { /* non-fatal */ }
+  return _db;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -35,6 +45,9 @@ async function saveToFirestore() {
   const indicator = document.getElementById('interview-autosave-indicator');
   if (indicator) indicator.textContent = '⏳ Saving…';
   try {
+    const db = await getDb();
+    if (!db) { if (indicator) indicator.textContent = ''; return; }
+    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     await setDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'), {
       updatedAt: new Date().toISOString(),
       currentSection: state.currentSection,
@@ -53,6 +66,9 @@ async function loadFromFirestore() {
   const user = auth.currentUser;
   if (!user) return false;
   try {
+    const db = await getDb();
+    if (!db) return false;
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     const snap = await getDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'));
     if (snap.exists()) {
       const data = snap.data();
@@ -71,6 +87,9 @@ async function clearFirestoreDraft() {
   const user = auth.currentUser;
   if (!user) return;
   try {
+    const db = await getDb();
+    if (!db) return;
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
     await deleteDoc(doc(db, 'interviews', user.uid, 'drafts', 'current'));
   } catch (e) { /* non-fatal */ }
 }
