@@ -1,4 +1,4 @@
-﻿/**
+/**
  * interview.js — DataSousChef Interview Engine v2
  * Sections: A → B → C (merged D/E/F/G) → H → review
  */
@@ -519,11 +519,12 @@ function buildReview() {
       <th style="padding:0.5rem 0.75rem;text-align:left;">Missing</th>
       <th style="padding:0.5rem 0.75rem;text-align:left;">Strip</th>
     </tr></thead><tbody>`;
-
   selectedCols().forEach((col, i) => {
     const bg = i % 2 === 0 ? '' : 'background:rgba(52,84,99,0.03);';
     const mapPreview = (col.value_mapping||'').split('\n').slice(0,2).join('; ') || '—';
-    const missInfo = col.has_missing ? `${col.missing_sentinels||'blank,NA'} → ${col.missing_action}${col.missing_custom?' ('+col.missing_custom+')':''}` : '—';
+    const missInfo = col.has_missing
+      ? `${col.missing_sentinels||'blank,NA'} → ${col.missing_action}${col.missing_custom?' ('+col.missing_custom+')':''}`
+      : '—';
     html += `<tr style="${bg}">
       <td style="padding:0.5rem 0.75rem 0.5rem 0;font-weight:600;">${col.name}</td>
       <td style="padding:0.5rem 0.75rem;">${col.rename_to||'—'}</td>
@@ -563,11 +564,22 @@ function buildReview() {
 
 // ── Submit ─────────────────────────────────────────────────────────────────────
 async function submitInterview() {
-  const btn = document.getElementById('wizard-btn-submit');
+  const btn    = document.getElementById('wizard-btn-submit');
   const saving = document.getElementById('review-saving');
   if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
-  if (saving) saving.style.display = '';
   collectH();
+
+  // Show progress message with elapsed-time counter
+  if (saving) {
+    saving.style.display = '';
+    saving.innerHTML = '⏳ <strong>Generating your script…</strong> This usually takes 3–8 minutes. Please keep this tab open.';
+  }
+  let elapsed = 0;
+  const timer = setInterval(() => {
+    elapsed += 5;
+    if (saving) saving.innerHTML =
+      `⏳ <strong>Generating your script…</strong> ${elapsed}s elapsed — AI is writing your cleaning code. Please keep this tab open.`;
+  }, 5000);
 
   try {
     const resp = await fetch(`${BACKEND_URL}/api/generate-script`, {

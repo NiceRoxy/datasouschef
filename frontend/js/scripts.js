@@ -1,4 +1,4 @@
-﻿/**
+/**
  * scripts.js — My Scripts view
  * Loads user scripts from Firestore, renders cards with download & delete.
  */
@@ -15,16 +15,19 @@ async function loadScripts() {
   const listEl    = document.getElementById('scripts-list');
   const emptyEl   = document.getElementById('scripts-empty');
   const loadingEl = document.getElementById('scripts-loading');
-  const navBadge  = document.querySelector('.nav-item[data-view="scripts"] .nav-badge');
   if (!listEl) return;
 
-  if (loadingEl) loadingEl.style.display = '';
+  if (loadingEl) { loadingEl.style.display = ''; loadingEl.textContent = 'Loading your scripts…'; }
   if (emptyEl)   emptyEl.style.display  = 'none';
   listEl.innerHTML = '';
 
-  const user = auth.currentUser;
+  // Wait for Firebase Auth to finish initialising (currentUser can be null briefly)
+  const user = await new Promise(resolve => {
+    const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); });
+  });
+
   if (!user) {
-    if (loadingEl) loadingEl.textContent = 'Please sign in to view your scripts.';
+    if (loadingEl) loadingEl.textContent = 'Sign in to view your scripts.';
     return;
   }
 
