@@ -68,7 +68,13 @@ def _default_hygiene() -> str:
         "2. Strip leading/trailing spaces from every cell in every column.\n"
         "3. Collapse repeated internal spaces in every column EXCEPT those typed 'text' "
         "   where collapse_spaces is not explicitly true.\n"
-        "Count every change in the final report.\n"
+        "4. CRITICAL — Column preservation: The output file MUST contain EVERY column "
+        "   from the original file. Never drop or exclude a column. Only the columns "
+        "   listed in the Column Rules section receive transformations; all others are "
+        "   copied through exactly as they are. For recode columns, keep the original "
+        "   column unchanged AND add a new column named '<original>-New' immediately "
+        "   after it in the column order.\n"
+        "Count every change in the final summary report.\n"
     )
 
 
@@ -228,10 +234,23 @@ def _section_date_order(rules: list) -> str:
 
 
 def _section_h(c: DataContract) -> str:
-    fmt = "same format as input" if c.output_format == "same" else c.output_format
+    # Determine output extension explicitly
+    if c.output_format == 'same':
+        import os
+        _, ext = os.path.splitext(c.file_name)
+        out_ext = ext.lstrip('.') or 'csv'
+    else:
+        out_ext = c.output_format
+    out_file = f"{c.output_name}.{out_ext}"
+    fmt_note = (
+        f"Save as '{out_file}'. "
+        f"Use pd.DataFrame.to_csv('{out_file}', index=False) for CSV, "
+        f"or pd.DataFrame.to_excel('{out_file}', index=False, engine='openpyxl') for XLSX. "
+        f"The file must open cleanly in Excel / pandas."
+    )
     return (
         f"## Output\n"
-        f"Save the cleaned file as \"{c.output_name}\" ({fmt}).\n"
+        f"{fmt_note}\n"
         f"Print a summary report: rows read, rows written; per column — "
         f"values changed, missing values handled, duplicates found, "
         f"unparseable dates, out-of-range numbers, unexpected categories. "
@@ -248,7 +267,10 @@ def build_prompt(contract: DataContract) -> str:
         _section_a(contract),
         "\n",
         _default_hygiene(),
-        "\n## Columns\n",
+        "\n## Columns\n"
+        "Apply the rules below to the listed columns. "
+        "ALL other columns from the original file must be carried through unchanged "
+        "(do NOT filter, drop, or subset the DataFrame to only these columns).\n",
     ]
     selected = [col for col in contract.columns if col.selected]
     unselected = [col for col in contract.columns if not col.selected]
@@ -256,10 +278,25 @@ def build_prompt(contract: DataContract) -> str:
         parts.append(_col_block(col))
     if unselected:
         names = ", ".join(f'"{c.name}"' for c in unselected)
-        parts.append(f"\nCarry these columns through unchanged: {names}.\n")
+        parts.append(f"\nCarry these columns through unchanged (do not modify them): {names}.\n")
     if contract.date_order_rules:
         parts.append("\n" + _section_date_order(contract.date_order_rules))
     parts.append("\n" + _section_h(contract))
+
+    # Critical reminders added last so the LLM sees them right before generating
+    recode_cols = [c for c in selected if c.col_type == 'recode']
+    if recode_cols:
+        recode_names = ', '.join(f'"{c.name}"' for c in recode_cols)
+        parts.append(
+            f"\n## IMPORTANT — Recode columns ({recode_names})\n"
+            "For each recode column:\n"
+            "  1. Keep the original column EXACTLY as-is (no changes to it).\n"
+            "  2. Create a new column named '<original>-New' using df['<original>-New'] = df['<original>'].map(mapping_dict).\n"
+            "  3. The mapping_dict must use the exact strings from the 'Value mapping' section above.\n"
+            "  4. Values not in the mapping_dict become NaN (do NOT use fillna unless a specific unmapped action was given).\n"
+            "  5. Insert the new column immediately after its source column.\n"
+        )
+
     parts.append(
         "\nReturn ONLY valid, complete Python code — no markdown fences, no explanations outside comments.\n"
         "Include inline comments explaining each step.\n"
