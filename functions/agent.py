@@ -15,10 +15,8 @@ try:
 except ImportError:
     pass
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage
-from langgraph.prebuilt import create_react_agent
-from langchain_tavily import TavilySearch
+# Heavy ML imports are deferred to generate_cleaning_script() to avoid
+# Firebase's 10-second function-discovery timeout at deploy time.
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -276,6 +274,12 @@ def build_prompt(contract: DataContract) -> str:
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def generate_cleaning_script(contract: DataContract) -> str:
+    # Lazy imports — kept here to avoid Firebase discovery timeout at deploy
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_core.messages import HumanMessage
+    from langgraph.prebuilt import create_react_agent
+    from langchain_tavily import TavilySearch
+
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip("\"'")
     if not GEMINI_API_KEY:
         prompt = build_prompt(contract)
