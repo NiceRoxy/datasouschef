@@ -29,100 +29,109 @@ def is_valid_python(code: str) -> bool:
     except SyntaxError:
         return False
 
+def _missing_action_description(col) -> str:
+    action_map = {
+        'blank':    'standardise to blank/NaN (system missing)',
+        'zero':     'replace with 0',
+        'mean':     'replace with column mean',
+        'median':   'replace with column median',
+        'remove':   'remove the entire record',
+        'unknown':  'replace with the string "Unknown"',
+        'zero_str': 'replace with the string "0"',
+        'custom':   f'replace with {col.missing_custom!r}',
+    }
+    return action_map.get(col.missing_action, col.missing_action)
+
 def generate_cleaning_script(contract: DataContract) -> str:
-    # Build prompt based on contract
-    prompt = f"""You are an expert Python data engineer. 
-Write a python script using pandas to clean the dataset based on the following contract.
-You can use the Tavily search tool to look up pandas documentation or Python syntax if you are unsure.
-The dataset is '{contract.dataset_name}' (format: {contract.dataset_format}, encoding: {contract.dataset_encoding}).
+    selected = [c for c in contract.columns if c.selected]
+    out_ext = contract.file_format if contract.output_format == 'same' else contract.output_format
 
-## Global Standardisation Rules (Must Apply Always):
-1. Extension Permission logic: If an "Extension Permission" column exists, normalise "YES", "Yes", "yes" to "Yes", and "No", "no", "N" to "No". Do not flag "Assessment Complete Date" > "Assessment Deadline" as late if Extension is "Yes". MUST flag records where Complete Date > Deadline AND Extension is "No" or missing.
-2. Date format standardisation: Auto-detect all date columns and convert them to standard ISO format (YYYY-MM-DD).
-3. Register Status normalisation: If a "Register Status" column exists, use fuzzy matching/canonical mapping to standardise typos (e.g. "active", "ACTIVE" -> "Active", "Withdrwal" -> "Withdrawn", "suspended", "Suspend" -> "Suspended", "Defer" -> "Deferred").
-4. ID standardisation: Trim whitespace and uppercase all ID columns (e.g., Student ID) before performing any merges.
-5. Cross-dataset orphan detection: When linking datasets, surface unmatched records from both sides (left-only and right-only) into separate dataframes/CSV outputs rather than silently dropping them.
-6. Withdrawn student handling: When linking, cross-reference register status. Flag or separate result records for students with a "Withdrawn" or "Suspended" register status.
+    prompt = f"""You are an expert Python data engineer. Write a complete, executable pandas script.
 
+DATASET
+  File     : {contract.file_name}
+  Format   : {contract.file_format}
+  Encoding : {contract.encoding}
+  Rows     : {contract.row_count_estimate}
+  Header   : {'yes' if contract.has_header else 'no'}
+  Output   : {contract.output_name}.{out_ext}
+
+COLUMN RULES
+Process only the columns listed below. All other columns pass through unchanged.
 """
-    
-    if "diagnose" in contract.selected_procedures and contract.columns_to_clean:
-        prompt += "## Diagnosis & Standardisation Requirements:\n"
-        for col in contract.columns_to_clean:
-            prompt += f"- Column '{col.name}':\n"
-            prompt += f"  - Expected Type: {col.expected_type}\n"
-            prompt += f"  - Missing Values: {col.missing_values} (Coded as: {col.missing_code})\n"
-            prompt += f"  - Context/Constraints: {col.context}\n"
-            prompt += f"  - Meaning: {col.meaning}\n"
-            
-    if "crosscol" in contract.selected_procedures and contract.cross_col_description:
-        prompt += f"\n## Cross-Column Checks:\n{contract.cross_col_description}\n"
-        
-    if "link" in contract.selected_procedures and contract.link_config:
-        lc = contract.link_config
-        prompt += "\n## Dataset Linkage:\n"
-        prompt += f"- Problem being solved: {lc.link_problem}\n"
-        prompt += f"- Primary Dataset: {lc.link_primary}\n"
-        prompt += f"- Datasets to join: {lc.link_names}\n"
-        prompt += f"- Join keys: {lc.link_keys}\n"
-        prompt += f"- Identifier Consistency: {lc.link_consistency}\n"
-        prompt += f"- Match Type: {lc.link_match_type}\n"
-        prompt += f"- Join Type: {lc.link_join_type}\n"
-        prompt += f"- On Unmatched: {lc.link_on_unmatched}\n"
-        
+
+    for col in selected:
+        display_name = col.rename_to if col.rename_to else col.name
+        prompt += f"\n--- Column: \"{col.name}\""
+        if col.rename_to:
+            prompt += f" → rename to \"{col.rename_to}\""
+        prompt += f"\n  Type: {col.col_type}"
+
+        if col.col_type == 'recode' and col.recode_to_type:
+            prompt += f"\n  Recode: Keep original column unchanged. Create a NEW column named \"{col.name}-New\" with type {col.recode_to_type}."
+
+        if col.value_mapping.strip():
+            prompt += f"\n  Value mapping (apply to {'new column' if col.col_type == 'recode' else 'this column'}):"
+            for line in col.value_mapping.strip().splitlines():
+                if '→' in line or '->' in line:
+                    prompt += f"\n    {line.strip()}"
+
+        if col.unmapped_action == 'system_missing':
+            prompt += "\n  Values not in mapping: set to NaN/system missing"
+        elif col.unmapped_action == 'keep':
+            prompt += "\n  Values not in mapping: keep unchanged"
+        elif col.unmapped_action == 'other' and col.unmapped_custom:
+            prompt += f"\n  Values not in mapping: {col.unmapped_custom}"
+
+        if col.has_missing:
+            sentinels = col.missing_sentinels or 'blank, NA, N/A'
+            prompt += f"\n  Missing value sentinels: {sentinels}"
+            prompt += f"\n  Missing value action: {_missing_action_description(col)}"
+
+        if col.strip_chars:
+            prompt += f"\n  Strip these characters from all values: {col.strip_chars!r}"
+
+    if contract.date_order_rules:
+        prompt += "\n\nDATE ORDERING RULES"
+        for rule in contract.date_order_rules:
+            prompt += f"\n  \"{rule.earlier_col}\" must be before \"{rule.later_col}\". On violation: {rule.on_violation}"
+
     prompt += """
-Please return ONLY valid, complete Python code. Do not include markdown formatting or explanations. 
-Include inline comments in the code to explain your logic.
-The code should define a function `clean_data(file_path)` and return a cleaned pandas DataFrame.
+
+OUTPUT REQUIREMENTS
+- Load the input file, apply all rules above, save to the output file name specified.
+- Print a concise summary: rows read, rows written, and per-column change counts.
+- Do NOT print any actual data values in the summary.
+- Return ONLY valid Python code. No markdown fences, no explanations outside comments.
+- Define a function clean_data(input_path) that returns the cleaned DataFrame.
+- Call clean_data() at the bottom of the script with the input file name.
 """
 
     if not GEMINI_API_KEY:
-        # Fallback to mock string generation if no API key
-        return f"# ERROR: GEMINI_API_KEY not configured.\n# Here is the prompt that would have been sent:\n\"\"\"\n{prompt}\n\"\"\""
+        return f"# ERROR: GEMINI_API_KEY not configured.\n# Prompt:\n\"\"\"\n{prompt}\n\"\"\""
 
-    # Initialize the LLM and Agent
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
-        google_api_key=GEMINI_API_KEY,
-        temperature=0
-    )
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", google_api_key=GEMINI_API_KEY, temperature=0)
     tools = [TavilySearch(max_results=3)]
     agent_executor = create_react_agent(llm, tools)
-    
-    max_retries = 3
+
     messages = [HumanMessage(content=prompt)]
-    
-    for attempt in range(max_retries):
+    for _ in range(3):
         try:
             response = agent_executor.invoke({"messages": messages})
-            
-            # The final answer is typically the content of the last AI message
-            final_message = response["messages"][-1]
-            code = final_message.content
-            
+            code = response["messages"][-1].content
             if isinstance(code, list):
-                # Extract text blocks if content is a list of dicts
-                code = "".join([block.get("text", "") for block in code if block.get("type") == "text"])
-            
-            # Clean up potential markdown formatting from LLM
-            if code.startswith("```python"):
-                code = code[len("```python"):]
-            if code.startswith("```"):
-                code = code[len("```"):]
-            if code.endswith("```"):
-                code = code[:-3]
-                
+                code = "".join(b.get("text", "") for b in code if b.get("type") == "text")
             code = code.strip()
-            
+            for fence in ("```python", "```"):
+                if code.startswith(fence): code = code[len(fence):]
+            if code.endswith("```"): code = code[:-3]
+            code = code.strip()
             if is_valid_python(code):
                 return code
-            else:
-                # Feed the error and broken code back into the conversation history
-                messages = response["messages"] + [
-                    HumanMessage(content=f"Your previous code had a SyntaxError. Please fix it. Ensure there is no markdown.\nHere is the broken code:\n{code}")
-                ]
-                
+            messages = response["messages"] + [
+                HumanMessage(content=f"Your code had a SyntaxError. Fix it. No markdown.\n{code}")
+            ]
         except Exception as e:
-            return f"# An error occurred calling the LLM: {str(e)}"
-            
-    return "# Failed to generate valid python after 3 attempts."
+            return f"# Error calling LLM: {e}"
+
+    return "# Failed to generate valid Python after 3 attempts."

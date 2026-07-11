@@ -1,38 +1,34 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 
-class ColumnConfig(BaseModel):
-    name: str = Field(..., description="The exact column header in the dataset")
-    expected_type: str = Field(..., description="The expected data type")
-    missing_values: Optional[str] = Field(None, description="Whether missing values exist (yes/no)")
-    missing_code: Optional[str] = Field(None, description="How missing values are coded")
-    context: Optional[str] = Field(None, description="Type-specific context (e.g. constraints, formats)")
-    meaning: Optional[str] = Field(None, description="What the column represents")
+class ColumnSpec(BaseModel):
+    name: str
+    selected: bool = True
+    col_type: str = 'text'           # id | date | number | category | text | recode
+    recode_to_type: Optional[str] = None
+    rename_to: Optional[str] = None
+    value_mapping: str = ''          # "old → new" lines
+    unmapped_action: str = 'system_missing'  # system_missing | keep | other
+    unmapped_custom: str = ''
+    has_missing: bool = False
+    missing_sentinels: str = ''      # comma-separated
+    missing_action: str = 'blank'    # blank | zero | mean | median | remove | unknown | zero_str | custom
+    missing_custom: str = ''
+    strip_chars: str = ''
 
-class LinkConfig(BaseModel):
-    link_problem: Optional[str] = Field(None, description="Problem the linked dataset answers")
-    link_primary: Optional[str] = Field(None, description="Primary dataset to keep all records from")
-    link_names: Optional[str] = Field(None, description="Names of the datasets being joined")
-    link_keys: Optional[str] = Field(None, description="Column(s) used as match keys")
-    link_consistency: Optional[str] = Field(None, description="Consistency of identifiers")
-    link_match_type: Optional[str] = Field(None, description="Type of match")
-    link_join_type: Optional[str] = Field(None, description="Type of join")
-    link_on_unmatched: Optional[str] = Field(None, description="Handling of duplicates/unmatched")
+class DateOrderRule(BaseModel):
+    earlier_col: str
+    later_col: str
+    on_violation: str = 'report'
 
 class DataContract(BaseModel):
-    dataset_name: str = Field(..., description="Name of the dataset")
-    dataset_format: str = Field(..., description="Format (csv, xlsx, etc.)")
-    dataset_encoding: str = Field(..., description="Encoding (utf-8, etc.)")
-    dataset_rows: str = Field(..., description="Rough number of rows")
-    
-    selected_procedures: List[str] = Field(..., description="List containing 'diagnose', 'crosscol', and/or 'link'")
-    
-    # Specifics for Diagnose & Standardise
-    columns_to_clean: List[ColumnConfig] = Field(default_factory=list)
-    
-    # Specifics for Cross-Column
-    cross_col_description: Optional[str] = Field(None)
-    cross_col_rules: List[str] = Field(default_factory=list)
-    
-    # Specifics for Link Datasets
-    link_config: Optional[LinkConfig] = Field(None)
+    file_name: str = ''
+    file_format: str = 'csv'
+    sheet_name: Optional[str] = None
+    has_header: bool = True
+    row_count_estimate: str = 'unknown'
+    encoding: str = 'utf-8'
+    columns: List[ColumnSpec] = Field(default_factory=list)
+    date_order_rules: List[DateOrderRule] = Field(default_factory=list)
+    output_name: str = 'cleaned'
+    output_format: str = 'same'
