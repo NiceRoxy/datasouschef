@@ -132,43 +132,107 @@ def _col_block(col: ColumnSpec) -> str:
 
     # ── Recode to different type (v2) ─────────────────────────────────────────
     if col.col_type == 'recode' and col.recode_to_type:
-        # Build the mapping dict from the free-text value_mapping field
+        new_col_name = col.rename_to or f'{col.name}-New'
+
+        # Parse mapping lines — support →, ->, and : separators
+        # Skip lines whose key looks like a missing-value sentinel (handled separately)
+        MISSING_SENTINEL_KEYS = {'missing', 'null', 'na', 'n/a', 'none', 'blank', 'nan', ''}
         mapping_pairs = []
-        if col.value_mapping and col.value_mapping.strip():
-            for line in col.value_mapping.strip().splitlines():
-                line = line.strip()
-                sep = '→' if '→' in line else ('->' if '->' in line else None)
-                if sep:
-                    parts = line.split(sep, 1)
-                    if len(parts) == 2:
-                        old_val = parts[0].strip()
-                        new_val = parts[1].strip()
-                        mapping_pairs.append((old_val, new_val))
+        raw_text = col.value_mapping or ''
+        for mline in raw_text.strip().splitlines():
+            mline = mline.strip()
+            if not mline:
+                continue
+            sep = None
+            for candidate in ['→', '->', ':']:
+                if candidate in mline:
+                    sep = candidate
+                    break
+            if sep:
+                parts = mline.split(sep, 1)
+                if len(parts) == 2:
+                    k, v = parts[0].strip(), parts[1].strip()
+                    if k.lower() not in MISSING_SENTINEL_KEYS:
+                        mapping_pairs.append((k, v))
 
-        unmapped = col.unmapped_action or 'system_missing'
-        if unmapped == 'keep':
-            na_action = f"df['{col.name}'].astype(str)"
-        else:
-            na_action = "pd.NA"
+        # Resolve missing replacement value for the NEW column
+        unmapped_val = col.unmapped_custom if (col.unmapped_action == 'other' and col.unmapped_custom) else 'pd.NA'
+        missing_fill = col.missing_custom if col.missing_custom else ('Unknown' if col.has_missing else 'pd.NA')
 
-        if mapping_pairs:
-            dict_repr = '{' + ', '.join(f"'{k}': '{v}'" for k, v in mapping_pairs) + '}'
+        # Detect whether any key looks like a numeric range (e.g. "0-64", "65+", ">=65")
+        import re as _re
+        _range_pat = _re.compile(r'^\d+\s*[-–]\s*\d+$|^\d+\s*\+$|^[><]=?\s*\d+|^\d+$')
+        has_range_keys = any(_range_pat.match(k) for k, _ in mapping_pairs)
+
+        if not mapping_pairs:
+            # No parseable mapping — give LLM the raw text and ask it to interpret
             lines.append(
-                f'  RECODE — use this exact Python pattern:\n'
-                f'    mapping_{col.name.replace(" ","_")} = {dict_repr}\n'
-                f'    # Cast source to str so numeric codes like 1/2 match string keys\n'
-                f'    new_col = df[\'{col.name}\'].astype(str).map(mapping_{col.name.replace(" ","_")})\n'
-                f'    # Insert new column immediately after the original\n'
-                f'    insert_pos = df.columns.get_loc(\'{col.name}\') + 1\n'
-                f'    df.insert(insert_pos, \'{col.name}-New\', new_col)\n'
-                f'    # Original column \'{col.name}\' is NOT modified.\n'
-                f'    # Unmapped values become: {unmapped}'
+                f'  RECODE column "{col.name}" → new column "{new_col_name}" '
+                f'(type: {col.recode_to_type}).\n'
+                f'  Raw mapping text (parse and implement faithfully):\n'
+                + ''.join(f'    {ln}\n' for ln in raw_text.strip().splitlines()) +
+                f'  Missing fill in new column: {missing_fill}\n'
+                f'  Unmapped fill: {unmapped_val}'
+            )
+        elif has_range_keys:
+            # Numeric range mapping — generate a range-testing function
+            range_cases = []
+            for k, v in mapping_pairs:
+                m_exact = _re.match(r'^(\d+(?:[.,]\d+)?)$', k)
+                m_range = _re.match(r'^(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)$', k)
+                m_plus  = _re.match(r'^(\d+(?:[.,]\d+)?)\s*\+$', k)
+                m_gte   = _re.match(r'^>=\s*(\d+(?:[.,]\d+)?)$', k)
+                m_gt    = _re.match(r'^>\s*(\d+(?:[.,]\d+)?)$', k)
+                m_lte   = _re.match(r'^<=\s*(\d+(?:[.,]\d+)?)$', k)
+                m_lt    = _re.match(r'^<\s*(\d+(?:[.,]\d+)?)$', k)
+                if m_range:
+                    lo, hi = m_range.group(1), m_range.group(2)
+                    range_cases.append(f"    if {lo} <= n <= {hi}: return '{v}'")
+                elif m_plus:
+                    lo = m_plus.group(1)
+                    range_cases.append(f"    if n >= {lo}: return '{v}'")
+                elif m_gte:
+                    range_cases.append(f"    if n >= {m_gte.group(1)}: return '{v}'")
+                elif m_gt:
+                    range_cases.append(f"    if n > {m_gt.group(1)}: return '{v}'")
+                elif m_lte:
+                    range_cases.append(f"    if n <= {m_lte.group(1)}: return '{v}'")
+                elif m_lt:
+                    range_cases.append(f"    if n < {m_lt.group(1)}: return '{v}'")
+                elif m_exact:
+                    range_cases.append(f"    if n == {m_exact.group(1)}: return '{v}'")
+            cases_str = '\n'.join(range_cases)
+            fn = f'_recode_{col.name.replace(" ","_").replace("-","_")}'
+            lines.append(
+                f'  NUMERIC RANGE RECODE — use this exact Python (copy verbatim):\n'
+                f'    def {fn}(val):\n'
+                f'        try: n = float(val)\n'
+                f'        except (ValueError, TypeError): return {missing_fill!r}\n'
+                f'{cases_str}\n'
+                f'        return {missing_fill!r}  # no range matched\n'
+                f'    _missing_mask_{fn} = df["{col.name}"].isna() | df["{col.name}"].astype(str).str.strip().str.lower().isin(GLOBAL_MISSING)\n'
+                f'    _new_{fn} = df["{col.name}"].apply({fn})\n'
+                f'    _new_{fn} = _new_{fn}.where(~_missing_mask_{fn}, other={missing_fill!r})\n'
+                f'    df.insert(df.columns.get_loc("{col.name}") + 1, "{new_col_name}", _new_{fn})\n'
+                f'    # Original column "{col.name}" is NOT modified.'
             )
         else:
+            # Category → Category mapping (string keys, case-insensitive)
+            dict_repr = '{' + ', '.join(f"'{k.lower()}': '{v}'" for k, v in mapping_pairs) + '}'
+            fn = f'_recode_{col.name.replace(" ","_").replace("-","_")}'
             lines.append(
-                f'  RECODE: Create column "{col.name}-New" inserted after "{col.name}". '
-                f'No mapping provided — populate with NaN.'
+                f'  CATEGORY RECODE — use this exact Python (copy verbatim):\n'
+                f'    {fn}_map = {dict_repr}  # keys are lower-cased for case-insensitive match\n'
+                f'    _missing_mask_{fn} = df["{col.name}"].isna() | df["{col.name}"].astype(str).str.strip().str.lower().isin(GLOBAL_MISSING)\n'
+                f'    _new_{fn} = df["{col.name}"].astype(str).str.strip().str.lower().map({fn}_map)\n'
+                f'    # Apply missing fill and unmapped fill\n'
+                f'    _new_{fn} = _new_{fn}.where(~_missing_mask_{fn}, other={missing_fill!r})\n'
+                f'    if {unmapped_val!r} != "pd.NA":\n'
+                f'        _new_{fn} = _new_{fn}.fillna({unmapped_val!r})\n'
+                f'    df.insert(df.columns.get_loc("{col.name}") + 1, "{new_col_name}", _new_{fn})\n'
+                f'    # Original column "{col.name}" is NOT modified.'
             )
+
 
     # ── Value mapping for non-recode columns ──────────────────────────────────
     elif col.value_mapping and col.value_mapping.strip():
