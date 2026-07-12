@@ -482,7 +482,7 @@ def generate_cleaning_script(contract: DataContract) -> str:
 
     # Single direct LLM call — no agent loop, no tool calls, no search overhead
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-pro",   # Pro: most reliable instruction-following; 3-5 min acceptable
         google_api_key=GEMINI_API_KEY,
         temperature=0,
         max_retries=2,

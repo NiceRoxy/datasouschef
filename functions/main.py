@@ -27,15 +27,15 @@ CORS_OPTIONS = options.CorsOptions(
 
 @https_fn.on_request(
     cors=CORS_OPTIONS,
-    timeout_sec=540,   # 9 minutes — needed for LLM calls
+    timeout_sec=540,   # 9 minutes — Gemini 2.5 Pro can take 3-5 min
     memory=options.MemoryOption.MB_512,
     region="europe-west2",  # London — closest to UK users
-    secrets=["GEMINI_API_KEY", "TAVILY_API_KEY"],
+    secrets=["GEMINI_API_KEY"],
 )
 def generate_script(req: https_fn.Request) -> https_fn.Response:
     """
-    Receives a DataContract JSON body, runs the LangGraph agent,
-    returns a Python cleaning script as plain text.
+    Receives a DataContract JSON body, calls Gemini 2.5 Pro directly,
+    and returns a Python cleaning script as plain text.
     """
     try:
         body = req.get_json(silent=True)
