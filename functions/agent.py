@@ -449,7 +449,14 @@ def build_prompt(contract: DataContract) -> str:
         "Define a function `clean_data(file_path: str)` that reads the file, applies all rules, "
         "prints the summary report, and saves the cleaned file. Call it at the end with:\n"
         "    if __name__ == '__main__':\n"
-        "        clean_data('<your file path here>')\n"
+        "        clean_data('<your file path here>')\n\n"
+        "## CRITICAL — Report stats dict\n"
+        "Use collections.defaultdict(int) for per-column stats so no KeyError can occur:\n"
+        "    from collections import defaultdict\n"
+        "    col_stats = defaultdict(int)  # keys: values_changed, missing_handled,\n"
+        "                                  #       duplicates, unparseable_dates,\n"
+        "                                  #       unparseable_numbers, unexpected_categories\n"
+        "Never use a plain dict with += on a key that might not exist.\n"
     )
     return "".join(parts)
 
