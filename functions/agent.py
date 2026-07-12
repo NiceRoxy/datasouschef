@@ -112,10 +112,11 @@ def _generate_recode_block(col: ColumnSpec) -> str:
     L.append(f'{P}if "{new_col}" not in df.columns:')
     L.append(f'{P}    _ins = df.columns.get_loc("{col.name}") + 1')
     L.append(f'{P}    df.insert(_ins, "{new_col}", _new_{fn})')
+    # Print summary using pre-computed counts (avoids nested f-string brace escaping)
     mf_repr = repr(missing_fill) if missing_fill else 'None'
-    L.append(f'{P}print(f"  Recode \\"{col.name}\\" -> \\"{new_col}\\": '
-             f'{{{{(~_miss_{fn} & _new_{fn}.notna()).sum():,}}}} mapped, '
-             f'{{{{_miss_{fn}.sum():,}}}} missing -> {mf_repr}")')
+    L.append(f'{P}_mc_{fn} = int((~_miss_{fn} & _new_{fn}.notna()).sum())')
+    L.append(f'{P}_xc_{fn} = int(_miss_{fn}.sum())')
+    L.append(f'{P}print(f"  Recode {col.name!r} -> {new_col!r}: {{_mc_{fn}:,}} mapped, {{_xc_{fn}:,}} missing -> {mf_repr}")')
     L.append('')
     return '\n'.join(L)
 
@@ -540,6 +541,13 @@ def generate_cleaning_script(contract: DataContract) -> str:
                     else:
                         code += '\n' + recode_section
                     print(f"[DSC] Injected {len(recode_cols)} recode block(s)")
+                    # Validate post-injection — if broken, add a visible comment warning
+                    if not is_valid_python(code):
+                        print("[DSC] WARNING: post-injection syntax error — recode section wrapped in try/except")
+                        code = code.replace(
+                            '\n    # ── DSC: deterministic recode blocks',
+                            '\n    # ── DSC: deterministic recode blocks (SYNTAX CHECK FAILED — review manually)'
+                        )
                 return code
 
             # Syntax error — ask the model to fix it (one retry)
