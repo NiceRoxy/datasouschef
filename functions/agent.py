@@ -344,11 +344,13 @@ def build_prompt(contract: DataContract) -> str:
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def generate_cleaning_script(contract: DataContract) -> str:
-    # Lazy imports — kept here to avoid Firebase discovery timeout at deploy
+    """
+    Build a structured prompt from the contract and call Gemini directly.
+    No LangGraph agent loop — single call, fast response (target: 1-2 min).
+    """
+    # Lazy import — avoids Firebase's 10-second function-discovery timeout
     from langchain_google_genai import ChatGoogleGenerativeAI
     from langchain_core.messages import HumanMessage
-    from langgraph.prebuilt import create_react_agent
-    from langchain_tavily import TavilySearch
 
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip().strip("\"'")
     if not GEMINI_API_KEY:
@@ -356,33 +358,44 @@ def generate_cleaning_script(contract: DataContract) -> str:
         return f"# ERROR: GEMINI_API_KEY not configured.\n# Prompt:\n\"\"\"\n{prompt}\n\"\"\""
 
     prompt = build_prompt(contract)
+    print(f"[DSC] Prompt length: {len(prompt)} chars")
 
+    # Single direct LLM call — no agent loop, no tool calls, no search overhead
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=GEMINI_API_KEY,
         temperature=0,
-        max_retries=3
+        max_retries=2,
     )
-    tools = [TavilySearch(max_results=3)]
-    agent_executor = create_react_agent(llm, tools)
+
     messages = [HumanMessage(content=prompt)]
 
     for attempt in range(3):
         try:
-            response = agent_executor.invoke({"messages": messages})
-            code = response["messages"][-1].content
-            print(f"--- ATTEMPT {attempt + 1} RAW OUTPUT (first 500 chars) ---")
-            print(str(code)[:500])
-            print("---")
-            code = _strip_fences(code)
+            print(f"[DSC] LLM call attempt {attempt + 1}...")
+            response = llm.invoke(messages)
+            code = response.content
+            if isinstance(code, list):
+                code = "".join(b.get("text", "") for b in code if b.get("type") == "text")
+            code = _strip_fences(code.strip())
+            print(f"[DSC] Response length: {len(code)} chars, valid Python: {is_valid_python(code)}")
+
             if is_valid_python(code):
                 return code
-            messages = response["messages"] + [
+
+            # Syntax error — ask the model to fix it (one retry)
+            messages = messages + [
+                response,
                 HumanMessage(
-                    content=f"Your code had a SyntaxError. Fix it and return only raw Python.\nBroken code:\n{code}"
+                    content=(
+                        "Your previous response had a Python SyntaxError. "
+                        "Return ONLY corrected Python code — no markdown fences, no explanations.\n"
+                        f"Broken code:\n{code}"
+                    )
                 )
             ]
         except Exception as e:
+            print(f"[DSC] LLM error on attempt {attempt + 1}: {e}")
             return f"# An error occurred calling the LLM: {e}"
 
     return "# Failed to generate valid Python after 3 attempts."

@@ -31,6 +31,8 @@ async function loadScripts() {
     return;
   }
 
+  const navBadge = document.querySelector('.nav-item[data-view="scripts"] .nav-badge');
+
   try {
     const db = await getDb();
     if (!db) { if (loadingEl) loadingEl.textContent = ''; return; }

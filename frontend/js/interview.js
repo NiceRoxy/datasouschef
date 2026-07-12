@@ -77,10 +77,12 @@ async function clearFirestoreDraft() {
 }
 
 async function saveScriptToFirestore(cleanScript, reportScript) {
-  const user = auth.currentUser; if (!user) return null;
+  const user = auth.currentUser; if (!user) { console.warn('[DSC] saveScript: no user'); return null; }
   try {
-    const db = await getDb(); if (!db) return null;
+    const db = await getDb();
+    if (!db) { console.warn('[DSC] saveScript: no db'); return null; }
     const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+    console.log('[DSC] saveScript: writing to users/', user.uid, '/scripts');
     const ref = await addDoc(collection(db, 'users', user.uid, 'scripts'), {
       name: state.contract.output_name || 'cleaned',
       createdAt: new Date().toISOString(),
@@ -88,8 +90,12 @@ async function saveScriptToFirestore(cleanScript, reportScript) {
       reportingScript: reportScript,
       contract: state.contract
     });
+    console.log('[DSC] saveScript: saved OK, doc id =', ref.id);
     return ref.id;
-  } catch (e) { console.warn('Script save failed:', e); return null; }
+  } catch (e) {
+    console.error('[DSC] saveScript FAILED:', e.code, e.message, e);
+    return null;   // non-fatal — download still proceeds
+  }
 }
 
 // ── Column helpers ─────────────────────────────────────────────────────────────
