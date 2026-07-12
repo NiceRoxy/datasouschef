@@ -1,4 +1,4 @@
-﻿/**
+/**
  * reporting-generator.js
  * Generates a standalone Python quality-report script from a DataContract.
  * Pure template — no AI, no network call.
@@ -13,9 +13,15 @@ export function generateReportingScript(contract) {
   const cleanedFile = `${outName}.${ext}`;
 
   const colBlocks = cols.flatMap(col => {
-    const displayName = col.rename_to || col.name;
-    const blocks = [buildTypeBlock(col.col_type, displayName)];
-    if (col.recode_to_type) blocks.push(buildTypeBlock(col.recode_to_type, `${displayName}-New`));
+    // For recode columns: report original as-is (category), then the new -New column
+    const originalType = col.col_type === 'recode' ? 'category' : col.col_type;
+    const displayName  = col.name;          // always use the source column name
+    const newColName   = col.rename_to      // user-configured name for the new column
+      ? col.rename_to
+      : `${col.name}-New`;
+
+    const blocks = [buildTypeBlock(originalType, displayName)];
+    if (col.recode_to_type) blocks.push(buildTypeBlock(col.recode_to_type, newColName));
     return blocks;
   }).join('');
 
@@ -49,8 +55,9 @@ print(f"\\n{SEP}\\nReport complete.\\n{SEP}")
 }
 
 function resolveExt(contract) {
-  if (contract.output_format && contract.output_format !== 'same') return contract.output_format;
-  return (contract.file_format === 'xlsx' || contract.file_format === 'xls') ? 'xlsx' : 'csv';
+  // CSV is the default for all internal reporting
+  if (!contract.output_format || contract.output_format === 'same' || contract.output_format === 'csv') return 'csv';
+  return contract.output_format;  // 'xlsx' if explicitly chosen
 }
 
 function buildTypeBlock(colType, name) {
@@ -79,6 +86,7 @@ if ${q} in df.columns:
     print(f"  Missing: {_s.isna().sum():,} | Min: {_s.min()} | Max: {_s.max()}")
     print(f"  Mean: {round(_s.mean(), 4) if not _s.isna().all() else 'N/A'} | Median: {_s.median()} | Mode: {_mode}")
 `;
+    case 'recode':   // original column of a recode — treat as category
     case 'category':
     case 'text':
     default:

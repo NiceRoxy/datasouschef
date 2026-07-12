@@ -64,18 +64,61 @@ def _section_a(c: DataContract) -> str:
 def _default_hygiene() -> str:
     return (
         "## Default hygiene (always applied)\n"
-        "1. Strip leading/trailing spaces from all column headings at read time.\n"
-        "2. Strip leading/trailing spaces from every cell in every column.\n"
-        "3. Collapse repeated internal spaces in every column EXCEPT those typed 'text' "
-        "   where collapse_spaces is not explicitly true.\n"
-        "4. CRITICAL — Column preservation: The output file MUST contain EVERY column "
-        "   from the original file. Never drop or exclude a column. Only the columns "
-        "   listed in the Column Rules section receive transformations; all others are "
-        "   copied through exactly as they are. For recode columns, keep the original "
-        "   column unchanged AND add a new column named '<original>-New' immediately "
-        "   after it in the column order.\n"
-        "Count every change in the final summary report.\n"
+        "1. Column headings: strip leading/trailing spaces at read time.\n"
+        "2. Cell whitespace: for EVERY column, use this pattern — never astype(str):\n"
+        "     df[col] = df[col].map(lambda v: re.sub(r'\\s+', ' ', v.strip()) if isinstance(v, str) else v)\n"
+        "   (astype(str) converts NaN to the literal string 'nan' — do NOT use it for cleaning)\n"
+        "3. Column preservation: output MUST contain EVERY column from the input file.\n"
+        "   Never drop or subset. Recode columns: keep original unchanged, add '<col>-New' after it.\n"
     )
+
+
+def _pandas3_rules() -> str:
+    """Return a prompt section covering pandas 3 / Copy-on-Write compatibility rules."""
+    return (
+        "## CRITICAL — Pandas 3 compatibility rules (all generated code MUST follow these)\n\n"
+
+        "### CoW (Copy-on-Write)\n"
+        "Pandas 3 makes CoW the default. Views are read-only. Rules:\n"
+        "  - NEVER use inplace=True on any operation.\n"
+        "  - NEVER do: series = df[col]; series[mask] = value  (mutates a detached copy, silently ignored).\n"
+        "  - ALWAYS assign back: df[col] = df[col].some_operation()\n"
+        "  - ALWAYS use: df.loc[mask, col] = value  (not series.loc[...])\n\n"
+
+        "### dtype safety when mixing strings and numbers\n"
+        "  - pd.to_numeric(df[col], errors='coerce') produces float64. You CANNOT assign a string like 'Unknown' to it.\n"
+        "  - Before assigning any string sentinel to a numeric column, cast to object:\n"
+        "      df[col] = df[col].astype(object)\n"
+        "      df.loc[df[col].isna(), col] = 'Unknown'\n\n"
+
+        "### select_dtypes\n"
+        "  - Use: try: df.select_dtypes(include=['object', 'str'])  except TypeError: df.select_dtypes(include='object')\n\n"
+
+        "### Missing-value detection — must run BEFORE any recoding or mapping\n"
+        "  Treat these tokens as missing (case-insensitive, after stripping spaces):\n"
+        "    '-', '--', '.', 'n/a', 'na', 'null', 'none', '#n/a', ''\n"
+        "  Per-column sentinels from the spec override or extend this list.\n"
+        "  Detection pattern:\n"
+        "    GLOBAL_MISSING = {'-', '--', '.', 'n/a', 'na', 'null', 'none', '#n/a', ''}\n"
+        "    mask = df[col].astype(str).str.strip().str.lower().isin(GLOBAL_MISSING) | df[col].isna()\n"
+        "    Apply missing replacement using mask BEFORE applying any value mapping.\n\n"
+
+        "### Value mapping — case-insensitive, space-stripped\n"
+        "  When matching mapping keys against cell values:\n"
+        "    df[col].astype(str).str.strip().str.lower().map({k.strip().lower(): v for k, v in mapping.items()})\n\n"
+
+        "### Numeric range keys in mapping\n"
+        "  Keys like '0-64', '65+', '>=65', '>65', '<=64', '<65', or plain '42' are RANGE/THRESHOLD rules, not literal strings.\n"
+        "  Parse them and test numeric cell values. Pattern:\n"
+        "    def apply_range_mapping(val, rules):\n"
+        "        try: n = float(val)\n"
+        "        except (ValueError, TypeError): return None\n"
+        "        for key, label in rules:\n"
+        "            if matches_range(n, key): return label\n"
+        "        return None\n"
+        "  First match wins. Non-numeric cells and unmatched numbers receive the missing replacement.\n"
+    )
+
 
 
 def _col_block(col: ColumnSpec) -> str:
@@ -295,12 +338,14 @@ def _section_h(c: DataContract) -> str:
 def build_prompt(contract: DataContract) -> str:
     parts = [
         "You are an expert Python data engineer.\n"
-        "Write a complete Python script using pandas that cleans the dataset described below.\n"
-        "You may use the Tavily search tool for pandas documentation if needed.\n\n",
+        "Write a complete, runnable Python script using pandas that cleans the dataset described below.\n"
+        "The script must import: pandas as pd, os, re (and any other stdlib modules it needs).\n\n",
         _section_a(contract),
         "\n",
+        _pandas3_rules(),
+        "\n",
         _default_hygiene(),
-        "\n## Columns\n"
+        "\n## Column rules\n"
         "Apply the rules below to the listed columns. "
         "ALL other columns from the original file must be carried through unchanged "
         "(do NOT filter, drop, or subset the DataFrame to only these columns).\n",
